@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skullgirls Mobile · 技能树伤害加点优化器</title>
+<style>
+  :root{
+    --bg:#0d1022; --card:#151a30; --card2:#1b2140; --line:#2a3157;
+    --tx:#e8ebf5; --tx2:#9aa3c0; --tx3:#6b7494;
+    --pierce:#4fc3f7; --crate:#ff8a80; --cdmg:#b388ff; --atk:#ffb74d;
+    --good:#69d98c; --warn:#ffd166;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+    font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    line-height:1.55;}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 80px}
+  header h1{font-size:26px;margin:0 0 6px;letter-spacing:.5px}
+  header p{margin:0;color:var(--tx2);font-size:14px}
+  .formula{margin:18px 0 6px;background:linear-gradient(135deg,#182042,#141a35);
+    border:1px solid var(--line);border-radius:12px;padding:14px 18px;font-size:15px}
+  .formula b{color:#fff}
+  .formula .f{font-family:Consolas,monospace;color:var(--warn);font-size:15.5px}
+  .formula small{display:block;color:var(--tx3);margin-top:6px}
+  h2{font-size:19px;margin:44px 0 14px;border-left:4px solid var(--atk);padding-left:10px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .card h3{margin:0 0 2px;font-size:17px}
+  .card .sub{color:var(--tx3);font-size:12.5px;margin-bottom:12px}
+  .statrow{display:flex;justify-content:space-between;align-items:center;
+    padding:7px 10px;border-radius:8px;background:var(--card2);margin-bottom:6px;font-size:14px}
+  .statrow .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:8px;vertical-align:1px}
+  .statrow b{font-family:Consolas,monospace}
+  .statrow .lv{color:var(--tx3);font-size:12.5px;margin-left:8px}
+  .kpi{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .kpi .k{flex:1 1 30%;background:var(--card2);border-radius:10px;padding:8px 12px;text-align:center}
+  .kpi .k small{display:block;color:var(--tx3);font-size:11.5px}
+  .kpi .k b{font-size:17px;font-family:Consolas,monospace}
+  .why{margin-top:12px;color:var(--tx2);font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+  .chart{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 10px 6px;margin-bottom:18px}
+  .chart .cap{padding:2px 14px 8px;color:var(--tx2);font-size:13.5px}
+  .chart .cap b{color:var(--tx)}
+  #chartA,#chartB,#chartC{width:100%;height:360px}
+  .bpanel{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;padding:4px 14px 16px}
+  .bpanel .slider{flex:1 1 260px}
+  .bpanel input[type=range]{width:100%;accent-color:var(--atk)}
+  .bpanel .dval{font-family:Consolas,monospace;color:var(--warn);font-size:18px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px}
+  th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line)}
+  th{color:var(--tx3);font-weight:600}
+  td b{font-family:Consolas,monospace}
+  .params{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 16px}
+  .pgrid label{display:block;color:var(--tx3);font-size:12px;margin-bottom:3px}
+  .pgrid input,.pgrid select{width:100%;background:var(--card2);color:var(--tx);
+    border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-family:Consolas,monospace;font-size:14px}
+  .pgrid .grp{grid-column:span 4;color:var(--tx2);font-size:13px;margin-top:4px;border-bottom:1px dashed var(--line)}
+  .btn{margin-top:14px;background:var(--atk);color:#1c1405;border:none;border-radius:9px;
+    padding:10px 26px;font-size:15px;font-weight:700;cursor:pointer}
+  .btn:hover{filter:brightness(1.1)}
+  .notes{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 24px;font-size:14px;color:var(--tx2)}
+  .notes h4{color:var(--tx);margin:16px 0 6px;font-size:15px}
+  .notes li{margin:4px 0}
+  .notes a{color:#7fb7ff;text-decoration:none}
+  .notes a:hover{text-decoration:underline}
+  .notes code{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:13px;color:var(--warn)}
+  .tag{display:inline-block;background:var(--card2);border:1px solid var(--line);border-radius:6px;
+    padding:1px 8px;font-size:12px;color:var(--tx2);margin-right:6px}
+  .foot{margin-top:26px;color:var(--tx3);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Skullgirls Mobile · 技能树伤害加点优化器</h1>
+  <p>预算 89 次升级（19 + 5×14），每级 +3%，分配到 穿透 / 暴击率 / 暴伤 / 攻击 —— 期望伤害最大化</p>
+  <div class="formula">
+    <b>期望伤害倍率</b>&nbsp;&nbsp;<span class="f">M = (1 + ATK%) × (1 − DEF×(1 − 穿透%)) × (1 + 暴击率% × 暴伤%)</span>
+    <small>机制已核实：防御为线性百分比减伤（上限 50%）；穿透<strong>按比例</strong>无视敌方减伤（50% 防 + 50% 穿透 → 承受 75% 伤害）；期望暴击加成 = 暴击率 × 暴伤。来源见页底。</small>
+  </div>
+</header>
+
+<h2>推荐加点</h2>
+<div class="cards" id="verdicts"></div>
+
+<h2>期望伤害 vs 敌方防御</h2>
+<div class="chart">
+  <div class="cap"><b>图A</b> · 各方案在敌方 DEF 15–50% 下的期望伤害倍率。虚线为"逐点最优"上包络（每个防御值单独重新加点）——注意通用推荐几乎贴住它：一套加点通吃整个防御区间。</div>
+  <div id="chartA"></div>
+</div>
+
+<h2>最优加点随敌方防御的变化</h2>
+<div class="chart">
+  <div class="cap"><b>图B</b> · 不同敌方防御下的最优加点分配（纵轴为投入的升级次数，已按上限截断浪费）。规律：<b>暴击率先拉到 ~99%，穿透只在 def ≳ 33 时才开始值得投入</b>。</div>
+  <div id="chartB"></div>
+  <div class="bpanel">
+    <div class="slider">
+      <span class="dval" id="dval">def = 32%</span>
+      <input type="range" id="dslider" min="15" max="50" step="1" value="32">
+    </div>
+    <div style="flex:2 1 420px;min-width:300px" id="dsel"></div>
+  </div>
+</div>
+
+<h2>为什么这样点：下一级的边际收益</h2>
+<div class="chart">
+  <div class="cap"><b>图C</b> · 在"通用推荐"成型后，再点一级各属性的期望伤害增益（%）。攻击与暴伤边际相等（≈+1.40%）正是均衡条件；暴击率已到 99%（最后一级被上限吃掉大半）；穿透在 def=15 时几乎无收益，def=50 时反超——这就是它只分到 2 级的原因。</div>
+  <div id="chartC"></div>
+</div>
+
+<h2>参数（可改，改后点"重算"）</h2>
+<div class="params">
+  <div class="pgrid" id="pgrid"></div>
+  <button class="btn" id="apply">应用并重算</button>
+</div>
+
+<h2>模型、假设与来源</h2>
+<div class="notes" id="notes"></div>
+
+<div class="foot">本页全部为客户端本地计算 · 打开即用，无需联网 · 机制核对于 2026-09（fandom wiki + 官方论坛 + Reddit 实测帖）</div>
+</div>
+
+<script src="echarts.min.js"></script>
+<script>
+"use strict";
+if (typeof echarts === "undefined") {
+  document.body.innerHTML = "<p style='padding:40px;font-size:16px'>缺少图表库文件 echarts.min.js —— 请将它与本网页放在同一文件夹后刷新。</p>";
+  throw new Error("echarts.min.js not found");
+}
+/* ================= 默认参数 ================= */
+const DEFAULTS = {
+  budget: 89, inc: 3,
+  base: { pierce: 0, crit_rate: 15, crit_dmg: 35, atk: 0 },   // 面板基础值
+  init: { pierce: 3,  crit_rate: 3,  crit_dmg: 6,  atk: 6 },  // 免费初始点
+  caps: { pierce: 50, crit_rate: 100, crit_dmg: 200, atk: 1e9 },
+  dmin: 15, dmax: 50, model: "linear",
+};
+let params = JSON.parse(JSON.stringify(DEFAULTS));
+
+const STATS = [
+  { key: "pierce",    name: "穿透",   color: "#4fc3f7" },
+  { key: "crit_rate", name: "暴击率", color: "#ff8a80" },
+  { key: "crit_dmg",  name: "暴伤",   color: "#b388ff" },
+  { key: "atk",       name: "攻击",   color: "#ffb74d" },
+];
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const avg = a => a.reduce((s, x) => s + x, 0) / a.length;
+
+function startVal(k) { return params.base[k] + params.init[k]; }
+function statVal(k, lv) { return Math.min(startVal(k) + params.inc * lv, params.caps[k]); }
+function capLevels(k) {
+  const c = params.caps[k], s = startVal(k);
+  return c > s ? Math.ceil((c - s) / params.inc) : 0;
+}
+function fDef(P, D) {
+  const eff = D * (1 - P / 100);
+  return params.model === "linear" ? 1 - eff / 100 : 100 / (100 + eff);
+}
+function multOf(st, D) {
+  return (1 + st.atk / 100) * fDef(st.pierce, D) * (1 + st.crit_rate * st.crit_dmg / 1e4);
+}
+function makeStats(lv) {
+  return {
+    pierce: statVal("pierce", lv.pierce), crit_rate: statVal("crit_rate", lv.crit_rate),
+    crit_dmg: statVal("crit_dmg", lv.crit_dmg), atk: statVal("atk", lv.atk),
+  };
+}
+
+/* ================= 求解（与 solve.py 完全一致的穷举） ================= */
+function Dgrid() {
+  const a = Math.round(Math.min(params.dmin, params.dmax));
+  const b = Math.round(Math.max(params.dmin, params.dmax));
+  const out = []; for (let D = a; D <= b; D++) out.push(D);
+  return out.length ? out : [a];
+}
+function optimize(mode, fixedD) {
+  const { budget, inc } = params;
+  const Ds = mode === "fixed" ? [fixedD] : Dgrid();
+  const pmax = capLevels("pierce"), cmax = capLevels("crit_rate");
+  let best = null, bestV = -1;
+  for (let p = 0; p <= pmax; p++) {
+    const P = statVal("pierce", p);
+    const fs = Ds.map(D => fDef(P, D));
+    const keyP = mode === "uniform" ? avg(fs) : (mode === "maximin" ? Math.min(...fs) : fs[0]);
+    for (let q = 0; q <= cmax; q++) {
+      const c = statVal("crit_rate", q);
+      for (let s = 0; s <= budget; s++) {
+        const r = budget - p - q - s;
+        if (r < 0) break;
+        const k = statVal("crit_dmg", r);
+        const v = (1 + statVal("atk", s) / 100) * (1 + c * k / 1e4) * keyP;
+        if (v > bestV) { bestV = v; best = { pierce: p, crit_rate: q, crit_dmg: r, atk: s }; }
+      }
+    }
+  }
+  return best;
+}
+function buildCurve(lv) {
+  const st = makeStats(lv);
+  const Ds = Dgrid();
+  const M = Ds.map(D => multOf(st, D));
+  return { lv, st, Ds, M, avgM: avg(M), minM: Math.min(...M) };
+}
+function topBuilds(n) {
+  const { budget } = params, Ds = Dgrid();
+  const rows = [];
+  const pmax = capLevels("pierce"), cmax = capLevels("crit_rate");
+  for (let p = 0; p <= pmax; p++) {
+    const P = statVal("pierce", p);
+    const fbar = avg(Ds.map(D => fDef(P, D)));
+    for (let q = 0; q <= cmax; q++) {
+      const c = statVal("crit_rate", q);
+      for (let s = 0; s <= budget; s++) {
+        const r = budget - p - q - s;
+        if (r < 0) break;
+        const k = statVal("crit_dmg", r), a = statVal("atk", s);
+        rows.push({ v: (1 + a / 100) * (1 + c * k / 1e4) * fbar, p, q, r, s });
+      }
+    }
+  }
+  rows.sort((x, y) => y.v - x.v);
+  const top = rows[0].v;
+  return rows.filter(x => x.v >= top * 0.99).slice(0, n);
+}
+function marginalsAt(st, D) {
+  const { inc } = params;
+  const dP = st.pierce < params.caps.pierce ? Math.min(inc, params.caps.pierce - st.pierce) : 0;
+  const dc = st.crit_rate < params.caps.crit_rate ? Math.min(inc, params.caps.crit_rate - st.crit_rate) : 0;
+  const dk = st.crit_dmg < params.caps.crit_dmg ? Math.min(inc, params.caps.crit_dmg - st.crit_dmg) : 0;
+  const crit = 1 + st.crit_rate * st.crit_dmg / 1e4;
+  return {
+    atk: 100 * inc / (100 + st.atk),
+    crit_rate: dc ? 100 * (st.crit_dmg * dc / 1e4) / crit : null,
+    crit_dmg: dk ? 100 * (st.crit_rate * dk / 1e4) / crit : null,
+    pierce: dP ? 100 * (D * dP / 1e4) / fDef(st.pierce, D) : null,
+  };
+}
+function pierceBreakeven(st) { // 穿透下一级边际追平攻击下一级所需敌方 DEF
+  const den = st.atk + 200 - st.pierce;
+  return den > 0 ? 1e4 / den : null;
+}
+
+/* ================= 渲染 ================= */
+const fmtM = v => "×" + v.toFixed(2);
+const fmtP = v => Math.round(v) + "%";
+const pctchg = (a, b) => b > 0 ? ((a / b - 1) * 100).toFixed(1) + "%" : "—";
+const LV = o => STATS.map(s => s.key + ":" + o[s.key]).join(" ");
+
+function statRowsHTML(lv, st) {
+  return STATS.map(s => {
+    const l = lv[s.key];
+    const arrow = startVal(s.key) !== st[s.key]
+      ? fmtP(startVal(s.key)) + " → <b>" + fmtP(st[s.key]) + "</b>"
+      : "<b>" + fmtP(st[s.key]) + "</b>";
+    return `<div class="statrow"><span><span class="dot" style="background:${s.color}"></span>${s.name}</span>
+      <span>${arrow}<span class="lv">+${l}级</span></span></div>`;
+  }).join("");
+}
+
+function renderVerdicts(u, m, allatk, allcrit, initial) {
+  const be = pierceBreakeven(u.st);
+  const uDmaxRatio = u.M[u.M.length - 1], mDmaxRatio = m.M[m.M.length - 1];
+  const uAvgCost = (u.avgM / m.avgM - 1) * 100;
+  document.getElementById("verdicts").innerHTML = `
+  <div class="card">
+    <h3>① 通用推荐 <span class="tag">def 15–50 均匀环境</span></h3>
+    <div class="sub">最大化整段防御区间的平均期望伤害 —— 混合环境首选</div>
+    ${statRowsHTML(u.lv, u.st)}
+    <div class="kpi">
+      <div class="k"><small>平均期望倍率</small><b>${fmtM(u.avgM)}</b></div>
+      <div class="k"><small>vs 全点攻击</small><b style="color:var(--good)">+${pctchg(u.avgM, allatk.avgM)}</b></div>
+      <div class="k"><small>vs 全点暴击</small><b style="color:var(--good)">+${pctchg(u.avgM, allcrit.avgM)}</b></div>
+      <div class="k"><small>vs 不加点</small><b style="color:var(--good)">×${(u.avgM / initial.avgM).toFixed(2)}</b></div>
+    </div>
+    <div class="why">边际逻辑：暴击率先拉到 ${fmtP(u.st.crit_rate)}（差 ${params.caps.crit_rate - u.st.crit_rate} 点满，最后一级只净赚 ~0.5% 不值得）；
+      之后攻击与暴伤的边际收益相等（≈+1.40%）平分剩余预算；穿透仅在敌方 DEF ≥ ${be ? be.toFixed(0) : "—"} 时边际才追平攻击，
+      所以整段 15–50 的环境里它只值得 <b>${u.lv.pierce} 级</b>。鲁棒性：def=50 最坏点仍有 ${fmtM(uDmaxRatio)}，
+      而平均只比专精高防的方案低 ${Math.abs(uAvgCost).toFixed(1)}%。</div>
+  </div>
+  <div class="card">
+    <h3>② 高防/最坏情况推荐 <span class="tag">按 def=${Math.round(params.dmax)} 优化</span></h3>
+    <div class="sub">保障最高防御敌人的伤害（maximin），副本/竞技场高防场景</div>
+    ${statRowsHTML(m.lv, m.st)}
+    <div class="kpi">
+      <div class="k"><small>def=${Math.round(params.dmax)} 期望</small><b>${fmtM(mDmaxRatio)}</b></div>
+      <div class="k"><small>vs 全点攻击</small><b style="color:var(--good)">+${pctchg(mDmaxRatio, allatk.M[allatk.M.length - 1])}</b></div>
+      <div class="k"><small>vs 通用推荐</small><b style="color:var(--good)">+${pctchg(mDmaxRatio, uDmaxRatio)}</b></div>
+    </div>
+    <div class="why">敌人防御贴上限 50% 时，穿透把有效减伤从 50% 压到 ${fmtP(params.dmax * (1 - m.st.pierce / 100))}，
+      全段乘一次 ≈ +${((m.st.pierce ? (1 - params.dmax * (1 - m.st.pierce / 100) / 100) / (1 - params.dmax / 100) - 1 : 0) * 100).toFixed(0)}%，
+      值得点满 ${m.lv.pierce} 级到 ${fmtP(m.st.pierce)}（第 16 级 48→50 会被上限吃掉 1 点，故止步 15 级）；
+      暴击率相应让位到 ${fmtP(m.st.crit_rate)}。平均期望 ${fmtM(m.avgM)}，仅比通用推荐低 ${pctchg(u.avgM, m.avgM)}。</div>
+  </div>
+  <div class="card">
+    <h3>③ 一句话结论</h3>
+    <div class="sub">先暴击率，再攻击+暴伤平分，穿透看环境</div>
+    <div class="why" style="border:none;font-size:14px;color:var(--tx)">
+      1) <b style="color:var(--crate)">暴击率</b>是发动机：先点到 ~99%（${capLevels("crit_rate")} 级内几乎必点满）。<br>
+      2) <b style="color:var(--atk)">攻击</b>与<b style="color:var(--cdmg)">暴伤</b>是两条等价传送带：暴击率满后二者边际收益相同，五五开分掉剩余预算。<br>
+      3) <b style="color:var(--pierce)">穿透</b>是高防专用件：环境平均 def ≳ 33 才开始回本，贴着 50 防的场合点满 15 级。<br>
+      4) 常见误区：无脑全点攻击（比推荐低 ${pctchg(u.avgM, allatk.avgM)}）、全点暴击（暴伤收益依赖暴击率，且 200% 上限前就已不如攻击）。
+    </div>
+  </div>`;
+}
+
+let charts = {};
+function drawChartA(curves, env) {
+  const c = charts.A || (charts.A = echarts.init(document.getElementById("chartA")));
+  const defs = [
+    ["通用推荐(均匀环境)", curves.u, "#69d98c", 3],
+    ["高防推荐(maximin)", curves.m, "#4fc3f7", 2],
+    ["全点攻击", curves.allatk, "#ffb74d", 2],
+    ["全点暴击", curves.allcrit, "#b388ff", 2],
+    ["不加点", curves.initial, "#6b7494", 2],
+  ];
+  const series = defs.map(([name, b, color, width]) => ({
+    name, type: "line", symbol: "none", smooth: true,
+    data: b.M.map(v => +v.toFixed(4)),
+    lineStyle: { width, color }, itemStyle: { color },
+  }));
+  series.push({
+    name: "逐点最优(上包络)", type: "line", symbol: "none", smooth: true,
+    data: env.map(v => +v.toFixed(4)),
+    lineStyle: { type: "dashed", color: "#8a93b8", width: 1.4 }, itemStyle: { color: "#8a93b8" },
+  });
+  c.setOption({
+    backgroundColor: "transparent",
+    tooltip: { trigger: "axis", valueFormatter: v => v == null ? "—" : "×" + (+v).toFixed(3) },
+    legend: { top: 0, textStyle: { color: "#9aa3c0", fontSize: 11.5 } },
+    grid: { left: 52, right: 20, top: 44, bottom: 34 },
+    xAxis: { type: "category", boundaryGap: false, data: curves.u.Ds.map(String),
+      name: "敌方DEF%", nameTextStyle: { color: "#6b7494" },
+      axisLabel: { color: "#9aa3c0" }, axisLine: { lineStyle: { color: "#2a3157" } } },
+    yAxis: { type: "value", name: "期望倍率", nameTextStyle: { color: "#6b7494" },
+      axisLabel: { color: "#9aa3c0", formatter: v => "×" + v },
+      splitLine: { lineStyle: { color: "#ffffff10" } } },
+    series,
+  }, true);
+}
+
+function drawChartB(perD) {
+  const c = charts.B || (charts.B = echarts.init(document.getElementById("chartB")));
+  const Ds = perD.map(x => x.D);
+  const series = STATS.map(s => ({
+    name: s.name, type: "bar", stack: "lv", barWidth: "62%",
+    data: perD.map(x => x.lv[s.key]),
+    itemStyle: { color: s.color },
+  }));
+  c.setOption({
+    backgroundColor: "transparent",
+    tooltip: { trigger: "axis",
+      formatter(ps) {
+        const D = ps[0].axisValue, x = perD.find(y => y.D === +D);
+        let h = "敌方 DEF " + D + "%<br>";
+        STATS.forEach(s => { h += s.name + " +" + x.lv[s.key] + "级 → " + fmtP(x.st[s.key]) + "<br>"; });
+        h += "期望倍率 <b>×" + x.M.toFixed(3) + "</b>";
+        return h;
+      } },
+    legend: { top: 0, textStyle: { color: "#9aa3c0", fontSize: 11.5 } },
+    grid: { left: 40, right: 16, top: 40, bottom: 30 },
+    xAxis: { type: "category", data: Ds.map(d => d + "%"), axisLabel: { color: "#9aa3c0" },
+      axisLine: { lineStyle: { color: "#2a3157" } }, name: "敌方DEF", nameTextStyle: { color: "#6b7494" } },
+    yAxis: { type: "value", name: "升级次数", nameTextStyle: { color: "#6b7494" },
+      axisLabel: { color: "#9aa3c0" }, splitLine: { lineStyle: { color: "#ffffff10" } } },
+    series,
+  }, true);
+}
+
+function drawChartC(marg) {
+  const c = charts.C || (charts.C = echarts.init(document.getElementById("chartC")));
+  const series = STATS.map(s => ({
+    name: s.name, type: "bar", barWidth: "22%",
+    data: marg.map(x => x.m[s.key] == null ? 0 : +x.m[s.key].toFixed(3)),
+    itemStyle: { color: s.color },
+    label: { show: true, position: "top", color: "#9aa3c0", fontSize: 10.5,
+      formatter: p => { const raw = marg[p.dataIndex].m[s.key]; return raw == null ? "已满" : raw.toFixed(2) + "%"; } },
+  }));
+  c.setOption({
+    backgroundColor: "transparent",
+    tooltip: { trigger: "axis", valueFormatter: v => v === 0 ? "—" : v + "%" },
+    legend: { top: 0, textStyle: { color: "#9aa3c0", fontSize: 11.5 } },
+    grid: { left: 46, right: 16, top: 40, bottom: 30 },
+    xAxis: { type: "category", data: marg.map(x => "def " + x.D + "%"),
+      axisLabel: { color: "#9aa3c0" }, axisLine: { lineStyle: { color: "#2a3157" } } },
+    yAxis: { type: "value", name: "下一级增益%", nameTextStyle: { color: "#6b7494" },
+      axisLabel: { color: "#9aa3c0", formatter: v => v + "%" },
+      splitLine: { lineStyle: { color: "#ffffff10" } } },
+    series,
+  }, true);
+}
+
+let uniformBuild = null, allatkBuild = null;   // 缓存，滑条拖动时免重复穷举
+function renderDSel(D) {
+  const lv = optimize("fixed", D), st = makeStats(lv);
+  const M = multOf(st, D);
+  const u = uniformBuild, allatk = allatkBuild;
+  document.getElementById("dval").textContent = "def = " + D + "%";
+  document.getElementById("dsel").innerHTML = `
+    <table>
+      <tr><th>属性</th><th>投入</th><th>最终值</th><th>期望倍率</th></tr>
+      ${STATS.map(s => `<tr><td><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:6px"></span>${s.name}</td>
+        <td><b>+${lv[s.key]}</b> 级</td><td><b>${fmtP(st[s.key])}</b></td>
+        ${s.key === "pierce" ? `<td rowspan="4"><b style="font-size:18px;color:var(--warn)">×${M.toFixed(3)}</b><br>
+          <span style="color:var(--tx3);font-size:12px">vs 全攻击 ${pctchg(M, multOf(allatk.st, D))}<br>
+          vs 通用推荐 ${pctchg(M, multOf(u.st, D))}</span></td>` : ""}</tr>`).join("")}
+    </table>`;
+}
+
+function renderNotes(top5, be, u) {
+  const rows = top5.map((t, i) => {
+    const lv = { pierce: t.p, crit_rate: t.q, crit_dmg: t.r, atk: t.s }, st = makeStats(lv);
+    return `<tr><td>${i + 1}</td><td><b>+${t.p} / +${t.q} / +${t.r} / +${t.s}</b> 级</td>
+      <td>穿 ${fmtP(st.pierce)} · 暴率 ${fmtP(st.crit_rate)} · 暴伤 ${fmtP(st.crit_dmg)} · 攻 ${fmtP(st.atk)}</td>
+      <td><b>${fmtM(t.v)}</b></td></tr>`;
+  }).join("");
+  document.getElementById("notes").innerHTML = `
+  <h4>已核实的机制（点击链接可查原文）</h4>
+  <ul>
+    <li><b>防御</b>：线性百分比减伤 <code>受伤 = 基础 × (1 − DEF%)</code>，上限 50%（正好覆盖本题 15–50 区间）。—
+      <a href="https://forum.skullgirlsmobile.com/threads/advanced-stats-guide-1-2-0.260/">官方论坛·Advanced Stats Guide</a>、
+      <a href="https://skullgirlsmobile.fandom.com/wiki/Sub-Stat">fandom·Sub-Stat</a></li>
+    <li><b>穿透</b>：按比例无视敌方减伤（<code>有效减伤 = DEF × (1 − 穿透)</code>），同时作用于 DEFENSE 与 ARMOR，上限 50%。
+      论坛实测帖明确否定了补丁公告的"相减"说法："after some testing we found it's <i>dividing</i> the defense rather than subtracting it"；Reddit 实测同样为"相乘"。50% 防 + 50% 穿透 → 承受 75%。—
+      <a href="https://forum.skullgirlsmobile.com/threads/accuracy%E3%80%81piercing-how-does-them-work.17952/">论坛·Piercing how does them work</a>、
+      <a href="https://forum.skullgirlsmobile.com/threads/piercing-and-defense-arent-working-as-intended.21128/">论坛·Piercing and defense aren't working as intended</a>、
+      <a href="https://www.reddit.com/r/SkullGirlsMobile/comments/1jzrrh2/damage_pierced_through_5_armor/">Reddit·Damage pierced through 5 armor</a></li>
+    <li><b>暴击</b>：期望加成 = 暴击率 × 暴伤（论坛："crit rate and crit damage basically get multiplied together"）；暴击率上限 100%，暴伤上限 200%。—
+      <a href="https://forum.skullgirlsmobile.com/threads/advanced-stats-guide-1-2-0.260/">Advanced Stats Guide</a>、
+      <a href="https://skullgirlsmobile.fandom.com/wiki/Sub-Stat">fandom·Sub-Stat（各上限表）</a></li>
+  </ul>
+  <h4>模型假设</h4>
+  <ul>
+    <li>敌方只有百分比减伤（不计 ARMOR 叠层、元素、Deadeye 等特殊机制）；每次升级 = 给某一项 +3%，可任意分配，顺序不影响结果。</li>
+    <li>初始值取题述四项：穿透 3、暴击率 3（基础 15% 之上）、暴伤 6（基础 35% 之上）、攻击 6，合计 18（题面"4+5×3=19"与此略有出入；如有 1 点富余初始值，影响可忽略，可在上方参数区自行修改）。</li>
+    <li>上限浪费已建模：穿透 48→50 那级只净赚 2 点、暴击率 99→100 那级只净赚 1 点——穷举会自动避开不划算的"满级"。</li>
+    <li>"def 15–50 环境"按均匀分布求平均期望；也提供最坏情况（maximin）与单点 def 最优（图B滑条）。</li>
+  </ul>
+  <h4>通用推荐的近似最优平台（平均倍率差距 &lt;1% 的前几名）</h4>
+  <table><tr><th>#</th><th>加点(穿/暴率/暴伤/攻)</th><th>最终属性</th><th>平均倍率</th></tr>${rows}</table>
+  <p style="margin-top:10px">可见最优解不是一个点而是一个平台——在暴击率点满的前提下，攻击与暴伤在 ±3~4 级内互换、穿透 ±1 级，损失都不超过 1%，按手感取即可。</p>`;
+}
+
+/* ================= 参数面板 ================= */
+const PFIELDS = [
+  { grp: "资源" },
+  { key: "budget", label: "升级预算(次)", min: 0, max: 500, step: 1 },
+  { key: "inc", label: "每级增量(%)", min: 1, max: 10, step: 1 },
+  { key: "model", label: "减伤模型", select: [["linear", "线性 (1−def)"], ["diminish", "递减 100/(100+def)"]] },
+  { grp: "敌方 DEF 环境(%)" },
+  { key: "dmin", label: "最低 def", min: 0, max: 90, step: 1 },
+  { key: "dmax", label: "最高 def", min: 0, max: 90, step: 1 },
+  { grp: "穿透 pierce" },
+  { key: "base.pierce", label: "基础(%)" }, { key: "init.pierce", label: "初始(%)" }, { key: "caps.pierce", label: "上限(%)" },
+  { grp: "暴击率 crit rate" },
+  { key: "base.crit_rate", label: "基础(%)" }, { key: "init.crit_rate", label: "初始(%)" }, { key: "caps.crit_rate", label: "上限(%)" },
+  { grp: "暴伤 crit damage" },
+  { key: "base.crit_dmg", label: "基础(%)" }, { key: "init.crit_dmg", label: "初始(%)" }, { key: "caps.crit_dmg", label: "上限(%)" },
+  { grp: "攻击 atk" },
+  { key: "base.atk", label: "基础(%)" }, { key: "init.atk", label: "初始(%)" }, { key: "caps.atk", label: "上限(留大数=无)" },
+];
+function getPath(o, p) { return p.split(".").reduce((a, k) => a[k], o); }
+function setPath(o, p, v) { const ks = p.split("."); ks.slice(0, -1).forEach(k => o = o[k]); o[ks[ks.length - 1]] = v; }
+function renderParamPanel() {
+  document.getElementById("pgrid").innerHTML = PFIELDS.map(f => {
+    if (f.grp) return `<div class="grp">${f.grp}</div>`;
+    if (f.select) return `<div><label>${f.label}</label><select id="pf_${f.key}">
+      ${f.select.map(([v, t]) => `<option value="${v}" ${getPath(params, f.key) === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>`;
+    return `<div><label>${f.label}</label><input id="pf_${f.key}" type="number"
+      ${f.min != null ? `min="${f.min}" max="${f.max}" step="${f.step}"` : ""} value="${getPath(params, f.key)}"></div>`;
+  }).join("");
+}
+function readParams() {
+  PFIELDS.forEach(f => {
+    if (f.grp) return;
+    const el = document.getElementById("pf_" + f.key);
+    if (!el) return;
+    if (f.select) setPath(params, f.key, el.value);
+    else { const v = parseFloat(el.value); if (isFinite(v)) setPath(params, f.key, v); }
+  });
+  params.caps.atk = Math.max(params.caps.atk, startVal("atk") + params.inc * params.budget + 10);
+  params.dmin = clamp(Math.round(params.dmin), 0, 90);
+  params.dmax = clamp(Math.round(params.dmax), 0, 90);
+}
+
+/* ================= 主流程 ================= */
+function recompute() {
+  const u = buildCurve(optimize("uniform"));
+  uniformBuild = u;
+  const m = buildCurve(optimize("maximin"));
+  const allatk = buildCurve({ pierce: 0, crit_rate: 0, crit_dmg: 0, atk: params.budget });
+  allatkBuild = allatk;
+  const kmax = Math.min(capLevels("crit_dmg"), params.budget - capLevels("crit_rate"));
+  const allcrit = buildCurve({ pierce: 0, crit_rate: capLevels("crit_rate"), crit_dmg: Math.max(0, kmax),
+    atk: Math.max(0, params.budget - capLevels("crit_rate") - kmax) });
+  const initial = buildCurve({ pierce: 0, crit_rate: 0, crit_dmg: 0, atk: 0 });
+
+  renderVerdicts(u, m, allatk, allcrit, initial);
+
+  const env = u.Ds.map(D => multOf(makeStats(optimize("fixed", D)), D));
+  drawChartA({ u, m, allatk, allcrit, initial }, env);
+
+  const step = Math.max(1, Math.round((params.dmax - params.dmin) / 7));
+  const perD = [];
+  for (let D = Math.round(params.dmin); D <= Math.round(params.dmax); D += step) {
+    const lv = optimize("fixed", D);
+    perD.push({ D, lv, st: makeStats(lv), M: multOf(makeStats(lv), D) });
+  }
+  drawChartB(perD);
+
+  const mid = Math.round((params.dmin + params.dmax) / 2);
+  const marg = [Math.round(params.dmin), mid, Math.round(params.dmax)]
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .map(D => ({ D, m: marginalsAt(u.st, D) }));
+  drawChartC(marg);
+
+  const top5 = topBuilds(5);
+  renderNotes(top5, pierceBreakeven(u.st), u);
+
+  const slider = document.getElementById("dslider");
+  slider.min = Math.round(params.dmin); slider.max = Math.round(params.dmax);
+  slider.value = clamp(+slider.value, +slider.min, +slider.max);
+  renderDSel(+slider.value);
+}
+
+document.getElementById("apply").addEventListener("click", () => { readParams(); recompute(); });
+document.getElementById("dslider").addEventListener("input", e => renderDSel(+e.target.value));
+window.addEventListener("resize", () => Object.values(charts).forEach(c => c.resize()));
+
+renderParamPanel();
+recompute();
+</script>
+</body>
+</html>

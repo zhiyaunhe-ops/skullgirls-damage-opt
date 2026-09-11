@@ -18,6 +18,11 @@
   .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 80px}
   header h1{font-size:26px;margin:0 0 6px;letter-spacing:.5px}
   header p{margin:0;color:var(--tx2);font-size:14px}
+  .headrow{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .langbtns{display:flex;gap:6px;margin-top:4px}
+  .langbtns button{background:var(--card2);color:var(--tx2);border:1px solid var(--line);
+    border-radius:8px;padding:6px 16px;cursor:pointer;font-size:13px}
+  .langbtns button.active{background:var(--atk);color:#1c1405;font-weight:700;border-color:var(--atk)}
   .formula{margin:18px 0 6px;background:linear-gradient(135deg,#182042,#141a35);
     border:1px solid var(--line);border-radius:12px;padding:14px 18px;font-size:15px}
   .formula b{color:#fff}
@@ -41,15 +46,16 @@
   .chart{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 10px 6px;margin-bottom:18px}
   .chart .cap{padding:2px 14px 8px;color:var(--tx2);font-size:13.5px}
   .chart .cap b{color:var(--tx)}
-  #chartA,#chartB,#chartC{width:100%;height:360px}
+  #chartA,#chartB,#chartC,#chartCheap{width:100%;height:360px}
   .bpanel{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;padding:4px 14px 16px}
   .bpanel .slider{flex:1 1 260px}
   .bpanel input[type=range]{width:100%;accent-color:var(--atk)}
   .bpanel .dval{font-family:Consolas,monospace;color:var(--warn);font-size:18px}
   table{border-collapse:collapse;width:100%;font-size:13.5px}
-  th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line)}
+  th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--tx3);font-weight:600}
   td b{font-family:Consolas,monospace}
+  .small{color:var(--tx3);font-size:12px}
   .params{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
   .pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 16px}
   .pgrid label{display:block;color:var(--tx3);font-size:12px;margin-bottom:3px}
@@ -59,7 +65,7 @@
   .btn{margin-top:14px;background:var(--atk);color:#1c1405;border:none;border-radius:9px;
     padding:10px 26px;font-size:15px;font-weight:700;cursor:pointer}
   .btn:hover{filter:brightness(1.1)}
-  .notes{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 24px;font-size:14px;color:var(--tx2)}
+  .notes{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 24px;font-size:14px;color:var(--tx2);margin-bottom:18px}
   .notes h4{color:var(--tx);margin:16px 0 6px;font-size:15px}
   .notes li{margin:4px 0}
   .notes a{color:#7fb7ff;text-decoration:none}
@@ -74,26 +80,28 @@
 <div class="wrap">
 
 <header>
-  <h1>Skullgirls Mobile · 技能树伤害加点优化器</h1>
-  <p>预算 89 次升级（19 + 5×14），每级 +3%，分配到 穿透 / 暴击率 / 暴伤 / 攻击 —— 期望伤害最大化</p>
+  <div class="headrow">
+    <div><h1 id="t_title"></h1><p id="t_sub"></p></div>
+    <div class="langbtns" id="langbtns"></div>
+  </div>
   <div class="formula">
-    <b>期望伤害倍率</b>&nbsp;&nbsp;<span class="f">M = (1 + ATK%) × (1 − DEF×(1 − 穿透%)) × (1 + 暴击率% × 暴伤%)</span>
-    <small>机制已核实：防御为线性百分比减伤（上限 50%）；穿透<strong>按比例</strong>无视敌方减伤（50% 防 + 50% 穿透 → 承受 75% 伤害）；期望暴击加成 = 暴击率 × 暴伤。来源见页底。</small>
+    <b id="t_formulaLabel"></b>&nbsp;&nbsp;<span class="f">M = (1 + ATK%) × (1 − DEF×(1 − Pierce%)) × (1 + CritRate% × CritDmg%)</span>
+    <small id="t_formulaNote"></small>
   </div>
 </header>
 
-<h2>推荐加点</h2>
+<h2 id="t_secVerdict"></h2>
 <div class="cards" id="verdicts"></div>
 
-<h2>期望伤害 vs 敌方防御</h2>
+<h2 id="t_secChartA"></h2>
 <div class="chart">
-  <div class="cap"><b>图A</b> · 各方案在敌方 DEF 15–50% 下的期望伤害倍率。虚线为"逐点最优"上包络（每个防御值单独重新加点）——注意通用推荐几乎贴住它：一套加点通吃整个防御区间。</div>
+  <div class="cap" id="capA"></div>
   <div id="chartA"></div>
 </div>
 
-<h2>最优加点随敌方防御的变化</h2>
+<h2 id="t_secChartB"></h2>
 <div class="chart">
-  <div class="cap"><b>图B</b> · 不同敌方防御下的最优加点分配（纵轴为投入的升级次数，已按上限截断浪费）。规律：<b>暴击率先拉到 ~99%，穿透只在 def ≳ 33 时才开始值得投入</b>。</div>
+  <div class="cap" id="capB"></div>
   <div id="chartB"></div>
   <div class="bpanel">
     <div class="slider">
@@ -104,47 +112,251 @@
   </div>
 </div>
 
-<h2>为什么这样点：下一级的边际收益</h2>
+<h2 id="t_secChartC"></h2>
 <div class="chart">
-  <div class="cap"><b>图C</b> · 在"通用推荐"成型后，再点一级各属性的期望伤害增益（%）。攻击与暴伤边际相等（≈+1.40%）正是均衡条件；暴击率已到 99%（最后一级被上限吃掉大半）；穿透在 def=15 时几乎无收益，def=50 时反超——这就是它只分到 2 级的原因。</div>
+  <div class="cap" id="capC"></div>
   <div id="chartC"></div>
 </div>
 
-<h2>参数（可改，改后点"重算"）</h2>
+<h2 id="t_secCheap"></h2>
+<div class="chart">
+  <div class="cap" id="capCheap"></div>
+  <div id="chartCheap"></div>
+</div>
+<div class="notes" id="cheapTable"></div>
+
+<h2 id="t_secParams"></h2>
 <div class="params">
   <div class="pgrid" id="pgrid"></div>
-  <button class="btn" id="apply">应用并重算</button>
+  <button class="btn" id="apply"></button>
 </div>
 
-<h2>模型、假设与来源</h2>
+<h2 id="t_secNotes"></h2>
 <div class="notes" id="notes"></div>
 
-<div class="foot">本页全部为客户端本地计算 · 打开即用，无需联网 · 机制核对于 2026-09（fandom wiki + 官方论坛 + Reddit 实测帖）</div>
+<div class="foot" id="t_foot"></div>
 </div>
 
 <script src="echarts.min.js"></script>
 <script>
 "use strict";
 if (typeof echarts === "undefined") {
-  document.body.innerHTML = "<p style='padding:40px;font-size:16px'>缺少图表库文件 echarts.min.js —— 请将它与本网页放在同一文件夹后刷新。</p>";
+  document.body.innerHTML = "<p style='padding:40px;font-size:16px'>Missing echarts.min.js next to this page.</p>";
   throw new Error("echarts.min.js not found");
 }
+
+/* ================= i18n ================= */
+const L10N = {
+"zh-CN": {
+  title:"Skullgirls Mobile · 技能树伤害加点优化器",
+  sub:"预算 89 次升级(19 + 5×14),每级 +3%,分配到 穿透 / 暴击率 / 暴伤 / 攻击 —— 期望伤害最大化",
+  formulaLabel:"期望伤害倍率",
+  formulaNote:"机制已核实:防御为线性百分比减伤(上限 50%);穿透按比例无视敌方减伤(50% 防 + 50% 穿透 → 承受 75% 伤害);期望暴击加成 = 暴击率 × 暴伤。来源见页底。",
+  secVerdict:"推荐加点", secChartA:"期望伤害 vs 敌方防御", secChartB:"最优加点随敌方防御的变化",
+  secChartC:"为什么这样点:下一级的边际收益", secCheap:"便宜版套餐:少花钱怎么点",
+  secParams:"参数(可改,改后点重算)", secNotes:"模型、假设与来源",
+  capA:"<b>图A</b> · 各方案在敌方 DEF 15–50% 下的期望伤害倍率。虚线为“逐点最优”上包络(每个防御值单独重新加点)——注意通用推荐几乎贴住它:一套加点通吃整个防御区间。",
+  capB:"<b>图B</b> · 不同敌方防御下的最优加点分配(纵轴为投入的升级次数,已按上限截断浪费)。规律:<b>暴击率先拉到 ~99%,穿透只在 def ≳ 33 时才开始值得投入</b>。",
+  capC:"<b>图C</b> · 在“通用推荐”成型后,再点一级各属性的期望伤害增益(%)。攻击与暴伤边际相等(≈+1.40%)正是均衡条件;暴击率已到 99%(最后一级被上限吃掉大半);穿透在 def=15 时几乎无收益,def=50 时反超——这就是它只分到 2 级的原因。",
+  capCheap:"<b>图D</b> · 横轴为总预算(升级次数 0–{Bmax}):同样的钱,三种花法的平均期望(def 15–50 均匀)——同预算最优、每项均分(全L级)、全点攻击。竖线为四个便宜套餐的位置。规律:<b>预算 ≲ {cross} 级时,最优解里没有任何暴击</b>,全堆攻击(外加几分穿透)就是最优;暴击双修要 ≈{cross} 级后才反超。均分套餐从来不是最优:以 48 级为例,同钱最优点法多打 {gain}。",
+  c1t:"① 通用推荐", c1tag:"def 15–50 均匀环境", c1sub:"最大化整段防御区间的平均期望伤害 —— 混合环境首选",
+  c2t:"② 高防/最坏情况推荐", c2tag:"按 def={d} 优化", c2sub:"保障最高防御敌人的伤害(maximin),副本/竞技场高防场景",
+  c3t:"③ 一句话结论", c3sub:"先暴击率,再攻击+暴伤平分,穿透看环境",
+  kAvg:"平均期望倍率", kVsAtk:"vs 全点攻击", kVsCrit:"vs 全点暴击", kVsNone:"vs 不加点",
+  kDefMax:"def={d} 期望", kVsRec:"vs 通用推荐",
+  why1:"边际逻辑:暴击率先拉到 {c}(差 {gap} 点满,最后一级只净赚 ~0.5% 不值得);之后攻击与暴伤的边际收益相等(≈+{m}%)平分剩余预算;穿透仅在敌方 DEF ≥ {be} 时边际才追平攻击,所以整段 15–50 的环境里它只值得 <b>{p} 级</b>。鲁棒性:def=50 最坏点仍有 {worst},而平均只比专精高防的方案低 {avg}。",
+  why2:"敌人防御贴上限 {D}% 时,穿透把有效减伤从 {D}% 压到 {eff},整段伤害 ≈+{gain}%,值得点 {lv} 级到 {P}(再往上会被上限吃掉增量);暴击率相应让位到 {c}。平均期望 {avg},仅比通用推荐低 {loss}。",
+  c3l1:"1) <b style=\"color:var(--crate)\">暴击率</b>是发动机:先点到 ~99%(预算内几乎必点满)。",
+  c3l2:"2) <b style=\"color:var(--atk)\">攻击</b>与<b style=\"color:var(--cdmg)\">暴伤</b>是两条等价传送带:暴击率满后二者边际收益相同,五五开分掉剩余预算。",
+  c3l3:"3) <b style=\"color:var(--pierce)\">穿透</b>是高防专用件:环境平均 def ≳ 33 才开始回本,贴着 50 防的场合点满 15 级。",
+  c3l4:"4) 常见误区:无脑全点攻击(比推荐低 {g1})、无脑全点暴击(暴伤的收益依赖暴击率先起来,低预算下纯暴击更亏)。",
+  stat_pierce:"穿透", stat_crit_rate:"暴击率", stat_crit_dmg:"暴伤", stat_atk:"攻击",
+  statS_pierce:"穿", statS_crit_rate:"暴率", statS_crit_dmg:"暴伤", statS_atk:"攻",
+  recU:"通用推荐(均匀环境)", recM:"高防推荐(maximin)", allAtk:"全点攻击", allCrit:"全点暴击",
+  none:"不加点", env:"逐点最优(上包络)", chOpt:"同预算最优", chEq:"每项均分", chAA:"全点攻击",
+  xDef:"敌方DEF%", yMult:"期望倍率", yLv:"升级次数", yMarg:"下一级增益%", yBudget:"平均期望倍率", xBudget:"升级预算(次)",
+  crossMark:"暴击入场",
+  capped:"已满",
+  hStat:"属性", hInvest:"投入", hFinal:"最终值", hM:"期望倍率",
+  tipDef:"敌方 DEF", tipM:"期望倍率",
+  hPreset:"套餐", hOpt:"同钱最优点法", hOptM:"最优平均", hEq:"均分套餐效果", hGain:"最优 vs 均分", hFrac:"相当于满配",
+  p9:"全9级", p10:"全10级 · 嘉宾", p12:"全12级", p15:"全15级 · 嘉宾", pFull:"满配",
+  times:"{n}次",
+  cheapNote:"说明:「嘉宾」套餐按每项 15/10 级计(对应嘉宾树的档位);四个套餐与满配共用同一优化环境(参数区可改)。低预算的通用法则:<b>先全堆攻击,穿透视敌人防御掺几级,暴击一套都别点</b>——直到预算 ≈{cross} 级,暴击率才开始值得。",
+  grpRes:"资源", grpEnv:"敌方 DEF 环境(%)", grpPierce:"穿透 pierce", grpRate:"暴击率 crit rate", grpDmg:"暴伤 crit damage", grpAtk:"攻击 atk",
+  fBudget:"升级预算(次)", fInc:"每级增量(%)", fModel:"减伤模型", fLinear:"线性 (1−def)", fDim:"递减 100/(100+def)",
+  fDmin:"最低 def", fDmax:"最高 def", fBase:"基础(%)", fInit:"初始(%)", fCap:"上限(%)", fCapAtk:"上限(留大数=无)",
+  apply:"应用并重算",
+  nMech:"已核实的机制(点击链接可查原文)",
+  m1:"<b>防御</b>:线性百分比减伤 <code>受伤 = 基础 × (1 − DEF%)</code>,上限 50%(正好覆盖本题 15–50 区间)。— ",
+  m2:"<b>穿透</b>:按比例无视敌方减伤(<code>有效减伤 = DEF × (1 − 穿透)</code>),同时作用于 DEFENSE 与 ARMOR,上限 50%。论坛实测帖明确否定了补丁公告的“相减”说法:“after some testing we found it's <i>dividing</i> the defense rather than subtracting it”;Reddit 实测同样为“相乘”。50% 防 + 50% 穿透 → 承受 75%。— ",
+  m3:"<b>暴击</b>:期望加成 = 暴击率 × 暴伤(论坛:“crit rate and crit damage basically get multiplied together”);暴击率上限 100%,暴伤上限 200%。— ",
+  nAssum:"模型假设",
+  a1:"敌方只有百分比减伤(不计 ARMOR 叠层、元素、Deadeye 等特殊机制);每次升级 = 给某一项 +3%,可任意分配,顺序不影响结果。",
+  a2:"初始值取题述四项:穿透 3、暴击率 3(基础 15% 之上)、暴伤 6(基础 35% 之上)、攻击 6,合计 18(题面“4+5×3=19”与此略有出入;如有 1 点富余初始值,影响可忽略,可在上方参数区自行修改)。",
+  a3:"上限浪费已建模:穿透 48→50 那级只净赚 2 点、暴击率 99→100 那级只净赚 1 点——穷举会自动避开不划算的“满级”。",
+  a4:"“def 15–50 环境”按均匀分布求平均期望;也提供最坏情况(maximin)与单点 def 最优(图B滑条)。",
+  nTop5:"通用推荐的近似最优平台(平均倍率差距 <1% 的前几名)",
+  nTop5Close:"可见最优解不是一个点而是一个平台——在暴击率点满的前提下,攻击与暴伤在 ±3~4 级内互换、穿透 ±1 级,损失都不超过 1%,按手感取即可。",
+  hRank:"#", hBuild:"加点(穿/暴率/暴伤/攻)", hStats:"最终属性", hAvgM:"平均倍率",
+  foot:"本页全部为客户端本地计算 · 打开即用,无需联网 · 机制核对于 2026-09(fandom wiki + 官方论坛 + Reddit 实测帖)",
+  langName:"中",
+},
+"zh-TW": {
+  title:"Skullgirls Mobile · 技能樹傷害加點優化器",
+  sub:"預算 89 次升級(19 + 5×14),每級 +3%,分配到 穿透 / 暴擊率 / 暴傷 / 攻擊 —— 期望傷害最大化",
+  formulaLabel:"期望傷害倍率",
+  formulaNote:"機制已核實:防禦為線性百分比減傷(上限 50%);穿透按比例無視敵方減傷(50% 防 + 50% 穿透 → 承受 75% 傷害);期望暴擊加成 = 暴擊率 × 暴傷。來源見頁底。",
+  secVerdict:"推薦加點", secChartA:"期望傷害 vs 敵方防禦", secChartB:"最優加點隨敵方防禦的變化",
+  secChartC:"為什麼這樣點:下一級的邊際收益", secCheap:"便宜版套餐:少花錢怎麼點",
+  secParams:"參數(可改,改後點重算)", secNotes:"模型、假設與來源",
+  capA:"<b>圖A</b> · 各方案在敵方 DEF 15–50% 下的期望傷害倍率。虛線為「逐點最優」上包絡(每個防禦值單獨重新加點)——注意通用推薦幾乎貼住它:一套加點通吃整個防禦區間。",
+  capB:"<b>圖B</b> · 不同敵方防禦下的最優加點分配(縱軸為投入的升級次數,已按上限截斷浪費)。規律:<b>暴擊率先拉到 ~99%,穿透只在 def ≳ 33 時才開始值得投入</b>。",
+  capC:"<b>圖C</b> · 在「通用推薦」成型後,再點一級各屬性的期望傷害增益(%)。攻擊與暴傷邊際相等(≈+1.40%)正是均衡條件;暴擊率已到 99%(最後一級被上限吃掉大半);穿透在 def=15 時幾乎無收益,def=50 時反超——這就是它只分到 2 級的原因。",
+  capCheap:"<b>圖D</b> · 橫軸為總預算(升級次數 0–{Bmax}):同樣的錢,三種花法的平均期望(def 15–50 均勻)——同預算最優、每項均分(全L級)、全點攻擊。豎線為四個便宜套餐的位置。規律:<b>預算 ≲ {cross} 級時,最優解裡沒有任何暴擊</b>,全堆攻擊(外加幾分穿透)就是最優;暴擊雙修要 ≈{cross} 級後才反超。均分套餐從來不是最優:以 48 級為例,同錢最優點法多打 {gain}。",
+  c1t:"① 通用推薦", c1tag:"def 15–50 均勻環境", c1sub:"最大化整段防禦區間的平均期望傷害 —— 混合環境首選",
+  c2t:"② 高防/最壞情況推薦", c2tag:"按 def={d} 優化", c2sub:"保障最高防禦敵人的傷害(maximin),副本/競技場高防場景",
+  c3t:"③ 一句話結論", c3sub:"先暴擊率,再攻擊+暴傷平分,穿透看環境",
+  kAvg:"平均期望倍率", kVsAtk:"vs 全點攻擊", kVsCrit:"vs 全點暴擊", kVsNone:"vs 不加點",
+  kDefMax:"def={d} 期望", kVsRec:"vs 通用推薦",
+  why1:"邊際邏輯:暴擊率先拉到 {c}(差 {gap} 點滿,最後一級只淨賺 ~0.5% 不值得);之後攻擊與暴傷的邊際收益相等(≈+{m}%)平分剩餘預算;穿透僅在敵方 DEF ≥ {be} 時邊際才追平攻擊,所以整段 15–50 的環境裡它只值得 <b>{p} 級</b>。魯棒性:def=50 最壞點仍有 {worst},而平均只比專精高防的方案低 {avg}。",
+  why2:"敵人防禦貼上限 {D}% 時,穿透把有效減傷從 {D}% 壓到 {eff},整段傷害 ≈+{gain}%,值得點 {lv} 級到 {P}(再往上會被上限吃掉增量);暴擊率相應讓位到 {c}。平均期望 {avg},僅比通用推薦低 {loss}。",
+  c3l1:"1) <b style=\"color:var(--crate)\">暴擊率</b>是引擎:先點到 ~99%(預算內幾乎必點滿)。",
+  c3l2:"2) <b style=\"color:var(--atk)\">攻擊</b>與<b style=\"color:var(--cdmg)\">暴傷</b>是兩條等價輸送帶:暴擊率滿後二者邊際收益相同,五五分掉剩餘預算。",
+  c3l3:"3) <b style=\"color:var(--pierce)\">穿透</b>是高防專用件:環境平均 def ≳ 33 才開始回本,貼著 50 防的場合點滿 15 級。",
+  c3l4:"4) 常見誤區:無腦全點攻擊(比推薦低 {g1})、無腦全點暴擊(暴傷的收益依賴暴擊率先起來,低預算下純暴擊更虧)。",
+  stat_pierce:"穿透", stat_crit_rate:"暴擊率", stat_crit_dmg:"暴傷", stat_atk:"攻擊",
+  statS_pierce:"穿", statS_crit_rate:"暴率", statS_crit_dmg:"暴傷", statS_atk:"攻",
+  recU:"通用推薦(均勻環境)", recM:"高防推薦(maximin)", allAtk:"全點攻擊", allCrit:"全點暴擊",
+  none:"不加點", env:"逐點最優(上包絡)", chOpt:"同預算最優", chEq:"每項均分", chAA:"全點攻擊",
+  xDef:"敵方DEF%", yMult:"期望倍率", yLv:"升級次數", yMarg:"下一級增益%", yBudget:"平均期望倍率", xBudget:"升級預算(次)",
+  crossMark:"暴擊入場",
+  capped:"已滿",
+  hStat:"屬性", hInvest:"投入", hFinal:"最終值", hM:"期望倍率",
+  tipDef:"敵方 DEF", tipM:"期望倍率",
+  hPreset:"套餐", hOpt:"同錢最優點法", hOptM:"最優平均", hEq:"均分套餐效果", hGain:"最優 vs 均分", hFrac:"相當於滿配",
+  p9:"全9級", p10:"全10級 · 嘉賓", p12:"全12級", p15:"全15級 · 嘉賓", pFull:"滿配",
+  times:"{n}次",
+  cheapNote:"說明:「嘉賓」套餐按每項 15/10 級計(對應嘉賓樹的檔位);四個套餐與滿配共用同一優化環境(參數區可改)。低預算的通用法則:<b>先全堆攻擊,穿透視敵人防禦摻幾級,暴擊一套都別點</b>——直到預算 ≈{cross} 級,暴擊率才開始值得。",
+  grpRes:"資源", grpEnv:"敵方 DEF 環境(%)", grpPierce:"穿透 pierce", grpRate:"暴擊率 crit rate", grpDmg:"暴傷 crit damage", grpAtk:"攻擊 atk",
+  fBudget:"升級預算(次)", fInc:"每級增量(%)", fModel:"減傷模型", fLinear:"線性 (1−def)", fDim:"遞減 100/(100+def)",
+  fDmin:"最低 def", fDmax:"最高 def", fBase:"基礎(%)", fInit:"初始(%)", fCap:"上限(%)", fCapAtk:"上限(留大數=無)",
+  apply:"應用並重算",
+  nMech:"已核實的機制(點擊連結可查原文)",
+  m1:"<b>防禦</b>:線性百分比減傷 <code>受傷 = 基礎 × (1 − DEF%)</code>,上限 50%(正好覆蓋本題 15–50 區間)。— ",
+  m2:"<b>穿透</b>:按比例無視敵方減傷(<code>有效減傷 = DEF × (1 − 穿透)</code>),同時作用於 DEFENSE 與 ARMOR,上限 50%。論文實測串明確否定了補丁公告的「相減」說法:“after some testing we found it's <i>dividing</i> the defense rather than subtracting it”;Reddit 實測同樣為「相乘」。50% 防 + 50% 穿透 → 承受 75%。— ",
+  m3:"<b>暴擊</b>:期望加成 = 暴擊率 × 暴傷(論壇:“crit rate and crit damage basically get multiplied together”);暴擊率上限 100%,暴傷上限 200%。— ",
+  nAssum:"模型假設",
+  a1:"敵方只有百分比減傷(不計 ARMOR 疊層、元素、Deadeye 等特殊機制);每次升級 = 給某一項 +3%,可任意分配,順序不影響結果。",
+  a2:"初始值取題述四項:穿透 3、暴擊率 3(基礎 15% 之上)、暴傷 6(基礎 35% 之上)、攻擊 6,合計 18(題面「4+5×3=19」與此略有出入;如有 1 點富餘初始值,影響可忽略,可在上方參數區自行修改)。",
+  a3:"上限浪費已建模:穿透 48→50 那級只淨賺 2 點、暴擊率 99→100 那級只淨賺 1 點——窮舉會自動避開不划算的「滿級」。",
+  a4:"「def 15–50 環境」按均勻分布求平均期望;也提供最壞情況(maximin)與單點 def 最優(圖B滑桿)。",
+  nTop5:"通用推薦的近似最優平台(平均倍率差距 <1% 的前幾名)",
+  nTop5Close:"可見最優解不是一個點而是一個平台——在暴擊率點滿的前提下,攻擊與暴傷在 ±3~4 級內互換、穿透 ±1 級,損失都不超過 1%,憑手感選即可。",
+  hRank:"#", hBuild:"加點(穿/暴率/暴傷/攻)", hStats:"最終屬性", hAvgM:"平均倍率",
+  foot:"本頁全部為用戶端本地計算 · 打開即用,無需連網 · 機制核實於 2026-09(fandom wiki + 官方論壇 + Reddit 實測串)",
+  langName:"繁",
+},
+"en": {
+  title:"Skullgirls Mobile · Skill Tree Damage Optimizer",
+  sub:"Budget of 89 upgrades (19 + 5×14), +3% each, split across Piercing / Crit Rate / Crit Damage / ATK — maximize expected damage",
+  formulaLabel:"Expected damage multiplier",
+  formulaNote:"Verified mechanics: Defense is a linear percentage reduction (capped 50%); Piercing ignores a PERCENT of enemy defense (50% DEF + 50% Pierce → take 75% damage); expected crit bonus = Crit Rate × Crit Dmg. Sources at the bottom.",
+  secVerdict:"Recommended builds", secChartA:"Expected damage vs enemy DEF", secChartB:"Optimal allocation vs enemy DEF",
+  secChartC:"Why: marginal gain of the next level", secCheap:"Budget presets: spending less",
+  secParams:"Parameters (editable, then Apply)", secNotes:"Model, assumptions & sources",
+  capA:"<b>Chart A</b> · Expected damage multiplier against enemy DEF 15–50%. The dashed line is the per-DEF optimum envelope (re-optimizing for every defense value) — note how the uniform recommendation almost hugs it: one build covers the whole range.",
+  capB:"<b>Chart B</b> · Optimal allocation at each enemy defense (bars = upgrades spent, cap waste removed). Pattern: <b>max Crit Rate to ~99% first; Piercing only becomes worthwhile at DEF ≳ 33</b>.",
+  capC:"<b>Chart C</b> · Gain (%) of one more level in each stat once the uniform build is done. ATK and Crit Dmg marginals match (≈+1.40%) — the equilibrium condition; Crit Rate sits at 99% (its next level is mostly eaten by the cap); Pierce is nearly worthless at DEF 15 but overtakes at DEF 50 — hence only 2 levels.",
+  capCheap:"<b>Chart D</b> · x-axis: total upgrade budget (0–{Bmax}). Same money, three ways to spend it (avg over DEF 15–50): optimal at that budget, equal split (L levels each), and all-ATK. Vertical lines mark the four budget presets. Rule of thumb: <b>below ≈{cross} levels the optimal build contains no crit at all</b> — pump ATK (plus a few Pierce); the crit duo only overtakes past ≈{cross}. Equal splits are never optimal: at 48 levels, spending the same budget optimally deals {gain} more.",
+  c1t:"① Recommended (uniform)", c1tag:"def 15–50 uniform env", c1sub:"Maximizes average expected damage across the whole defense range — best for mixed content",
+  c2t:"② High-defense (worst case)", c2tag:"optimized for def={d}", c2sub:"Secures damage against the toughest defenders (maximin) — endgame / rift settings",
+  c3t:"③ TL;DR", c3sub:"Crit Rate first, then ATK + Crit Dmg split, Pierce depends on DEF",
+  kAvg:"Avg. expected mult.", kVsAtk:"vs all-ATK", kVsCrit:"vs all-crit", kVsNone:"vs unspent",
+  kDefMax:"Expected at def={d}", kVsRec:"vs uniform rec.",
+  why1:"Marginal logic: push Crit Rate to {c} first (its last level is mostly eaten by the 100% cap); after that ATK and Crit Dmg share the rest at equal marginals (≈+{m}% per level). Pierce only catches up with ATK when enemy DEF ≥ {be}, so across a 15–50 environment it earns just <b>{p} levels</b>. Robustness: still {worst} at DEF=50, while averaging only {avg} below the high-def specialist.",
+  why2:"Against a DEF-{D}% enemy, Piercing squeezes effective reduction from {D}% down to {eff} — a one-time ≈+{gain}% to all damage. That buys {lv} levels up to {P} (further levels get eaten by the cap), while Crit Rate yields to {c}. Average {avg}, only {loss} below the uniform recommendation.",
+  c3l1:"1) <b style=\"color:var(--crate)\">Crit Rate</b> is the engine: bring it to ~99% first — within this budget that is almost always worth it.",
+  c3l2:"2) <b style=\"color:var(--atk)\">ATK</b> and <b style=\"color:var(--cdmg)\">Crit Dmg</b> are equivalent conveyor belts: once Crit Rate is maxed their marginals match, so split the rest 50/50.",
+  c3l3:"3) <b style=\"color:var(--pierce)\">Pierce</b> is the high-DEF part: it breaks even only when enemy DEF ≳ 33; against DEF-50 enemies take all 15 levels.",
+  c3l4:"4) Common mistakes: dumping everything into ATK ({g1} worse than recommended) or into crit — Crit Dmg only pays once Crit Rate is high, and pure crit is even worse at low budgets.",
+  stat_pierce:"Pierce", stat_crit_rate:"Crit Rate", stat_crit_dmg:"Crit Dmg", stat_atk:"ATK",
+  statS_pierce:"P", statS_crit_rate:"CR", statS_crit_dmg:"CD", statS_atk:"ATK",
+  recU:"Recommended (uniform)", recM:"High-def (maximin)", allAtk:"All ATK", allCrit:"All Crit",
+  none:"No investment", env:"Per-DEF optimum (envelope)", chOpt:"Optimal at budget", chEq:"Equal split", chAA:"All ATK",
+  xDef:"Enemy DEF%", yMult:"Expected mult.", yLv:"Upgrades spent", yMarg:"Next-level gain%", yBudget:"Avg. expected mult.", xBudget:"Upgrade budget (levels)",
+  crossMark:"crit kicks in",
+  capped:"capped",
+  hStat:"Stat", hInvest:"Spent", hFinal:"Final", hM:"Multiplier",
+  tipDef:"Enemy DEF", tipM:"Expected mult.",
+  hPreset:"Preset", hOpt:"Optimal for same budget", hOptM:"Optimal avg.", hEq:"Equal-split avg.", hGain:"Optimal vs equal", hFrac:"vs full build",
+  p9:"All 9lv", p10:"All 10lv · Marquee", p12:"All 12lv", p15:"All 15lv · Marquee", pFull:"Full tree",
+  times:"{n} lv",
+  cheapNote:"Note: the “Marquee” presets use 15/10 levels per stat (the Marquee-tree equivalents); all presets share the same optimization environment (see Parameters). Budget rule of thumb: <b>go all-ATK first, mix in a few Pierce depending on enemy DEF, and skip crit entirely</b> — Crit Rate only becomes worth it around a budget of ≈{cross} levels.",
+  grpRes:"Budget & model", grpEnv:"Enemy DEF range (%)", grpPierce:"Piercing", grpRate:"Crit Rate", grpDmg:"Crit Damage", grpAtk:"ATK",
+  fBudget:"Upgrade budget", fInc:"+% per level", fModel:"Defense model", fLinear:"Linear (1−def)", fDim:"Diminishing 100/(100+def)",
+  fDmin:"Min DEF", fDmax:"Max DEF", fBase:"Base (%)", fInit:"Free initial (%)", fCap:"Cap (%)", fCapAtk:"Cap (huge = none)",
+  apply:"Apply & recompute",
+  nMech:"Verified mechanics (links to sources)",
+  m1:"<b>Defense</b>: linear percentage reduction <code>taken = base × (1 − DEF%)</code>, capped at 50% (covers the whole 15–50 range). — ",
+  m2:"<b>Piercing</b>: ignores a PERCENT of enemy reduction (<code>effective DEF = DEF × (1 − Pierce)</code>), applies to both DEFENSE and ARMOR, capped 50%. Forum testing explicitly disproved the patch-note “subtraction” reading: “after some testing we found it's <i>dividing</i> the defense rather than subtracting it”; Reddit testing agrees (multiplicative). 50% DEF + 50% Pierce → take 75%. — ",
+  m3:"<b>Crit</b>: expected bonus = Crit Rate × Crit Dmg (forum: “crit rate and crit damage basically get multiplied together”); Crit Rate caps at 100%, Crit Damage at 200%. — ",
+  nAssum:"Model assumptions",
+  a1:"The enemy has only percentage damage reduction (no Armor stacks, elements, Deadeye, etc.); each upgrade = +3% to one stat, freely allocatable — order does not matter.",
+  a2:"Initial values per the problem: Pierce 3, Crit Rate 3 (on top of the 15% base), Crit Dmg 6 (on top of 35%), ATK 6 — 18 in total (the stated “4+5×3=19” differs by 1; a spare initial point is negligible and can be edited in Parameters).",
+  a3:"Cap waste is modeled: the level taking Pierce 48→50 nets only 2pp and Crit Rate 99→100 only 1pp — the brute-force search automatically skips unprofitable “maxing”.",
+  a4:"“DEF 15–50 environment” averages uniformly; a worst-case (maximin) view and a per-DEF slider (Chart B) are also provided.",
+  nTop5:"Near-optimal plateau of the uniform build (top builds within 1%)",
+  nTop5Close:"The optimum is a plateau, not a point — with Crit Rate maxed, ATK and Crit Dmg can swap ±3–4 levels and Pierce ±1 with less than 1% loss; pick by feel.",
+  hRank:"#", hBuild:"Build (P/CR/CD/ATK)", hStats:"Final stats", hAvgM:"Avg. mult.",
+  foot:"100% client-side · works offline · mechanics verified 2026-09 (fandom wiki + official forums + Reddit tests)",
+  langName:"EN",
+},
+};
+let LANG = (function(){
+  try{
+    const s = typeof localStorage !== "undefined" ? localStorage.getItem("sgm-opt-lang") : null;
+    if (s && L10N[s]) return s;
+    const nav = (typeof navigator !== "undefined" && navigator.language) || "zh-CN";
+    if (/^en/i.test(nav)) return "en";
+    if (/^(zh-TW|zh-HK|zh-Hant)/i.test(nav)) return "zh-TW";
+  }catch(e){}
+  return "zh-CN";
+})();
+function t(key){ return (L10N[LANG] && L10N[LANG][key]) ?? L10N["zh-CN"][key] ?? key; }
+function tf(key, vars){ return t(key).replace(/\{(\w+)\}/g, (m,k)=> (vars&&vars[k]!=null)?vars[k]:m); }
+function setLang(l){
+  if(!L10N[l]) return;
+  LANG = l;
+  try{ localStorage.setItem("sgm-opt-lang", l); }catch(e){}
+  document.documentElement.lang = l === "en" ? "en" : l;
+  renderStaticTexts(); renderParamPanel(); recompute();
+}
+function renderLangBtns(){
+  document.getElementById("langbtns").innerHTML = ["zh-CN","zh-TW","en"].map(l =>
+    `<button data-l="${l}" class="${l===LANG?"active":""}">${L10N[l].langName}</button>`).join("");
+  document.querySelectorAll("#langbtns button").forEach(b =>
+    b.addEventListener("click", () => setLang(b.dataset.l)));
+}
+
 /* ================= 默认参数 ================= */
 const DEFAULTS = {
   budget: 89, inc: 3,
-  base: { pierce: 0, crit_rate: 15, crit_dmg: 35, atk: 0 },   // 面板基础值
-  init: { pierce: 3,  crit_rate: 3,  crit_dmg: 6,  atk: 6 },  // 免费初始点
+  base: { pierce: 0, crit_rate: 15, crit_dmg: 35, atk: 0 },
+  init: { pierce: 3,  crit_rate: 3,  crit_dmg: 6,  atk: 6 },
   caps: { pierce: 50, crit_rate: 100, crit_dmg: 200, atk: 1e9 },
   dmin: 15, dmax: 50, model: "linear",
 };
 let params = JSON.parse(JSON.stringify(DEFAULTS));
 
 const STATS = [
-  { key: "pierce",    name: "穿透",   color: "#4fc3f7" },
-  { key: "crit_rate", name: "暴击率", color: "#ff8a80" },
-  { key: "crit_dmg",  name: "暴伤",   color: "#b388ff" },
-  { key: "atk",       name: "攻击",   color: "#ffb74d" },
+  { key: "pierce",    color: "#4fc3f7" },
+  { key: "crit_rate", color: "#ff8a80" },
+  { key: "crit_dmg",  color: "#b388ff" },
+  { key: "atk",       color: "#ffb74d" },
 ];
+const statName = k => t("stat_" + k);
+const statShort = k => t("statS_" + k);
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const avg = a => a.reduce((s, x) => s + x, 0) / a.length;
@@ -169,15 +381,16 @@ function makeStats(lv) {
   };
 }
 
-/* ================= 求解（与 solve.py 完全一致的穷举） ================= */
+/* ================= 求解(穷举,与 solve.py 一致) ================= */
 function Dgrid() {
   const a = Math.round(Math.min(params.dmin, params.dmax));
   const b = Math.round(Math.max(params.dmin, params.dmax));
   const out = []; for (let D = a; D <= b; D++) out.push(D);
   return out.length ? out : [a];
 }
-function optimize(mode, fixedD) {
-  const { budget, inc } = params;
+function optimize(mode, fixedD, budget) {
+  const B = budget == null ? params.budget : budget;
+  const { inc } = params;
   const Ds = mode === "fixed" ? [fixedD] : Dgrid();
   const pmax = capLevels("pierce"), cmax = capLevels("crit_rate");
   let best = null, bestV = -1;
@@ -187,8 +400,8 @@ function optimize(mode, fixedD) {
     const keyP = mode === "uniform" ? avg(fs) : (mode === "maximin" ? Math.min(...fs) : fs[0]);
     for (let q = 0; q <= cmax; q++) {
       const c = statVal("crit_rate", q);
-      for (let s = 0; s <= budget; s++) {
-        const r = budget - p - q - s;
+      for (let s = 0; s <= B; s++) {
+        const r = B - p - q - s;
         if (r < 0) break;
         const k = statVal("crit_dmg", r);
         const v = (1 + statVal("atk", s) / 100) * (1 + c * k / 1e4) * keyP;
@@ -238,16 +451,41 @@ function marginalsAt(st, D) {
     pierce: dP ? 100 * (D * dP / 1e4) / fDef(st.pierce, D) : null,
   };
 }
-function pierceBreakeven(st) { // 穿透下一级边际追平攻击下一级所需敌方 DEF
+function pierceBreakeven(st) {
   const den = st.atk + 200 - st.pierce;
   return den > 0 ? 1e4 / den : null;
+}
+function budgetSweep() {
+  let cross = null;
+  const opt = [], eq = [], aa = [], Bs = [];
+  for (let B = 0; B <= params.budget; B++) {
+    const lv = optimize("uniform", null, B);
+    if (cross === null && lv.crit_rate > 0) cross = B;
+    Bs.push(String(B));
+    opt.push(+buildCurve(lv).avgM.toFixed(4));
+    aa.push(+buildCurve({ pierce: 0, crit_rate: 0, crit_dmg: 0, atk: B }).avgM.toFixed(4));
+    const L = Math.floor(B / 4);
+    eq.push(B % 4 === 0 ? +buildCurve({ pierce: L, crit_rate: L, crit_dmg: L, atk: L }).avgM.toFixed(4) : null);
+  }
+  return { Bs, cross, opt, eq, aa };
+}
+function cheapPresets() {
+  return [9, 10, 12, 15].map(L => {
+    const B = 4 * L;
+    return {
+      L, B, within: B <= params.budget,
+      eq: buildCurve({ pierce: L, crit_rate: L, crit_dmg: L, atk: L }),
+      opt: buildCurve(optimize("uniform", null, B)),
+      aa: buildCurve({ pierce: 0, crit_rate: 0, crit_dmg: 0, atk: Math.min(B, params.budget) }),
+    };
+  });
 }
 
 /* ================= 渲染 ================= */
 const fmtM = v => "×" + v.toFixed(2);
+const fmtM3 = v => "×" + v.toFixed(3);
 const fmtP = v => Math.round(v) + "%";
 const pctchg = (a, b) => b > 0 ? ((a / b - 1) * 100).toFixed(1) + "%" : "—";
-const LV = o => STATS.map(s => s.key + ":" + o[s.key]).join(" ");
 
 function statRowsHTML(lv, st) {
   return STATS.map(s => {
@@ -255,53 +493,50 @@ function statRowsHTML(lv, st) {
     const arrow = startVal(s.key) !== st[s.key]
       ? fmtP(startVal(s.key)) + " → <b>" + fmtP(st[s.key]) + "</b>"
       : "<b>" + fmtP(st[s.key]) + "</b>";
-    return `<div class="statrow"><span><span class="dot" style="background:${s.color}"></span>${s.name}</span>
-      <span>${arrow}<span class="lv">+${l}级</span></span></div>`;
+    return `<div class="statrow"><span><span class="dot" style="background:${s.color}"></span>${statName(s.key)}</span>
+      <span>${arrow}<span class="lv">+${l}${t("lvUnit") || "级"}</span></span></div>`;
   }).join("");
 }
+L10N["zh-CN"].lvUnit = "级"; L10N["zh-TW"].lvUnit = "級"; L10N["en"].lvUnit = " lv";
 
 function renderVerdicts(u, m, allatk, allcrit, initial) {
   const be = pierceBreakeven(u.st);
   const uDmaxRatio = u.M[u.M.length - 1], mDmaxRatio = m.M[m.M.length - 1];
-  const uAvgCost = (u.avgM / m.avgM - 1) * 100;
+  const uAvgCost = Math.abs((u.avgM / m.avgM - 1) * 100).toFixed(1);
+  const mMarg = (100 * params.inc / (100 + u.st.atk)).toFixed(2);
+  const eff = params.dmax * (1 - m.st.pierce / 100);
+  const pierceGain = m.st.pierce ? ((1 - params.dmax * (1 - m.st.pierce / 100) / 100) / (1 - params.dmax / 100) - 1) * 100 : 0;
   document.getElementById("verdicts").innerHTML = `
   <div class="card">
-    <h3>① 通用推荐 <span class="tag">def 15–50 均匀环境</span></h3>
-    <div class="sub">最大化整段防御区间的平均期望伤害 —— 混合环境首选</div>
+    <h3>${tf("c1t")} <span class="tag">${t("c1tag")}</span></h3>
+    <div class="sub">${t("c1sub")}</div>
     ${statRowsHTML(u.lv, u.st)}
     <div class="kpi">
-      <div class="k"><small>平均期望倍率</small><b>${fmtM(u.avgM)}</b></div>
-      <div class="k"><small>vs 全点攻击</small><b style="color:var(--good)">+${pctchg(u.avgM, allatk.avgM)}</b></div>
-      <div class="k"><small>vs 全点暴击</small><b style="color:var(--good)">+${pctchg(u.avgM, allcrit.avgM)}</b></div>
-      <div class="k"><small>vs 不加点</small><b style="color:var(--good)">×${(u.avgM / initial.avgM).toFixed(2)}</b></div>
+      <div class="k"><small>${t("kAvg")}</small><b>${fmtM(u.avgM)}</b></div>
+      <div class="k"><small>${t("kVsAtk")}</small><b style="color:var(--good)">+${pctchg(u.avgM, allatk.avgM)}</b></div>
+      <div class="k"><small>${t("kVsCrit")}</small><b style="color:var(--good)">+${pctchg(u.avgM, allcrit.avgM)}</b></div>
+      <div class="k"><small>${t("kVsNone")}</small><b style="color:var(--good)">×${(u.avgM / initial.avgM).toFixed(2)}</b></div>
     </div>
-    <div class="why">边际逻辑：暴击率先拉到 ${fmtP(u.st.crit_rate)}（差 ${params.caps.crit_rate - u.st.crit_rate} 点满，最后一级只净赚 ~0.5% 不值得）；
-      之后攻击与暴伤的边际收益相等（≈+1.40%）平分剩余预算；穿透仅在敌方 DEF ≥ ${be ? be.toFixed(0) : "—"} 时边际才追平攻击，
-      所以整段 15–50 的环境里它只值得 <b>${u.lv.pierce} 级</b>。鲁棒性：def=50 最坏点仍有 ${fmtM(uDmaxRatio)}，
-      而平均只比专精高防的方案低 ${Math.abs(uAvgCost).toFixed(1)}%。</div>
+    <div class="why">${tf("why1", { c: fmtP(u.st.crit_rate), gap: params.caps.crit_rate - u.st.crit_rate,
+      m: mMarg, be: be ? be.toFixed(0) : "—", p: u.lv.pierce, worst: fmtM(uDmaxRatio), avg: uAvgCost + "%" })}</div>
   </div>
   <div class="card">
-    <h3>② 高防/最坏情况推荐 <span class="tag">按 def=${Math.round(params.dmax)} 优化</span></h3>
-    <div class="sub">保障最高防御敌人的伤害（maximin），副本/竞技场高防场景</div>
+    <h3>${t("c2t")} <span class="tag">${tf("c2tag", { d: Math.round(params.dmax) })}</span></h3>
+    <div class="sub">${t("c2sub")}</div>
     ${statRowsHTML(m.lv, m.st)}
     <div class="kpi">
-      <div class="k"><small>def=${Math.round(params.dmax)} 期望</small><b>${fmtM(mDmaxRatio)}</b></div>
-      <div class="k"><small>vs 全点攻击</small><b style="color:var(--good)">+${pctchg(mDmaxRatio, allatk.M[allatk.M.length - 1])}</b></div>
-      <div class="k"><small>vs 通用推荐</small><b style="color:var(--good)">+${pctchg(mDmaxRatio, uDmaxRatio)}</b></div>
+      <div class="k"><small>${tf("kDefMax", { d: Math.round(params.dmax) })}</small><b>${fmtM(mDmaxRatio)}</b></div>
+      <div class="k"><small>${t("kVsAtk")}</small><b style="color:var(--good)">+${pctchg(mDmaxRatio, allatk.M[allatk.M.length - 1])}</b></div>
+      <div class="k"><small>${t("kVsRec")}</small><b style="color:var(--good)">+${pctchg(mDmaxRatio, uDmaxRatio)}</b></div>
     </div>
-    <div class="why">敌人防御贴上限 50% 时，穿透把有效减伤从 50% 压到 ${fmtP(params.dmax * (1 - m.st.pierce / 100))}，
-      全段乘一次 ≈ +${((m.st.pierce ? (1 - params.dmax * (1 - m.st.pierce / 100) / 100) / (1 - params.dmax / 100) - 1 : 0) * 100).toFixed(0)}%，
-      值得点满 ${m.lv.pierce} 级到 ${fmtP(m.st.pierce)}（第 16 级 48→50 会被上限吃掉 1 点，故止步 15 级）；
-      暴击率相应让位到 ${fmtP(m.st.crit_rate)}。平均期望 ${fmtM(m.avgM)}，仅比通用推荐低 ${pctchg(u.avgM, m.avgM)}。</div>
+    <div class="why">${tf("why2", { D: Math.round(params.dmax), eff: fmtP(eff), gain: pierceGain.toFixed(0),
+      lv: m.lv.pierce, P: fmtP(m.st.pierce), c: fmtP(m.st.crit_rate), avg: fmtM(m.avgM), loss: pctchg(u.avgM, m.avgM) })}</div>
   </div>
   <div class="card">
-    <h3>③ 一句话结论</h3>
-    <div class="sub">先暴击率，再攻击+暴伤平分，穿透看环境</div>
+    <h3>${t("c3t")}</h3>
+    <div class="sub">${t("c3sub")}</div>
     <div class="why" style="border:none;font-size:14px;color:var(--tx)">
-      1) <b style="color:var(--crate)">暴击率</b>是发动机：先点到 ~99%（${capLevels("crit_rate")} 级内几乎必点满）。<br>
-      2) <b style="color:var(--atk)">攻击</b>与<b style="color:var(--cdmg)">暴伤</b>是两条等价传送带：暴击率满后二者边际收益相同，五五开分掉剩余预算。<br>
-      3) <b style="color:var(--pierce)">穿透</b>是高防专用件：环境平均 def ≳ 33 才开始回本，贴着 50 防的场合点满 15 级。<br>
-      4) 常见误区：无脑全点攻击（比推荐低 ${pctchg(u.avgM, allatk.avgM)}）、全点暴击（暴伤收益依赖暴击率，且 200% 上限前就已不如攻击）。
+      ${tf("c3l1")}<br>${tf("c3l2")}<br>${tf("c3l3")}<br>${tf("c3l4", { g1: pctchg(u.avgM, allatk.avgM) })}
     </div>
   </div>`;
 }
@@ -310,11 +545,11 @@ let charts = {};
 function drawChartA(curves, env) {
   const c = charts.A || (charts.A = echarts.init(document.getElementById("chartA")));
   const defs = [
-    ["通用推荐(均匀环境)", curves.u, "#69d98c", 3],
-    ["高防推荐(maximin)", curves.m, "#4fc3f7", 2],
-    ["全点攻击", curves.allatk, "#ffb74d", 2],
-    ["全点暴击", curves.allcrit, "#b388ff", 2],
-    ["不加点", curves.initial, "#6b7494", 2],
+    [t("recU"), curves.u, "#69d98c", 3],
+    [t("recM"), curves.m, "#4fc3f7", 2],
+    [t("allAtk"), curves.allatk, "#ffb74d", 2],
+    [t("allCrit"), curves.allcrit, "#b388ff", 2],
+    [t("none"), curves.initial, "#6b7494", 2],
   ];
   const series = defs.map(([name, b, color, width]) => ({
     name, type: "line", symbol: "none", smooth: true,
@@ -322,7 +557,7 @@ function drawChartA(curves, env) {
     lineStyle: { width, color }, itemStyle: { color },
   }));
   series.push({
-    name: "逐点最优(上包络)", type: "line", symbol: "none", smooth: true,
+    name: t("env"), type: "line", symbol: "none", smooth: true,
     data: env.map(v => +v.toFixed(4)),
     lineStyle: { type: "dashed", color: "#8a93b8", width: 1.4 }, itemStyle: { color: "#8a93b8" },
   });
@@ -332,9 +567,9 @@ function drawChartA(curves, env) {
     legend: { top: 0, textStyle: { color: "#9aa3c0", fontSize: 11.5 } },
     grid: { left: 52, right: 20, top: 44, bottom: 34 },
     xAxis: { type: "category", boundaryGap: false, data: curves.u.Ds.map(String),
-      name: "敌方DEF%", nameTextStyle: { color: "#6b7494" },
+      name: t("xDef"), nameTextStyle: { color: "#6b7494" },
       axisLabel: { color: "#9aa3c0" }, axisLine: { lineStyle: { color: "#2a3157" } } },
-    yAxis: { type: "value", name: "期望倍率", nameTextStyle: { color: "#6b7494" },
+    yAxis: { type: "value", name: t("yMult"), nameTextStyle: { color: "#6b7494" },
       axisLabel: { color: "#9aa3c0", formatter: v => "×" + v },
       splitLine: { lineStyle: { color: "#ffffff10" } } },
     series,
@@ -345,7 +580,7 @@ function drawChartB(perD) {
   const c = charts.B || (charts.B = echarts.init(document.getElementById("chartB")));
   const Ds = perD.map(x => x.D);
   const series = STATS.map(s => ({
-    name: s.name, type: "bar", stack: "lv", barWidth: "62%",
+    name: statName(s.key), type: "bar", stack: "lv", barWidth: "62%",
     data: perD.map(x => x.lv[s.key]),
     itemStyle: { color: s.color },
   }));
@@ -354,16 +589,16 @@ function drawChartB(perD) {
     tooltip: { trigger: "axis",
       formatter(ps) {
         const D = ps[0].axisValue, x = perD.find(y => y.D === +D);
-        let h = "敌方 DEF " + D + "%<br>";
-        STATS.forEach(s => { h += s.name + " +" + x.lv[s.key] + "级 → " + fmtP(x.st[s.key]) + "<br>"; });
-        h += "期望倍率 <b>×" + x.M.toFixed(3) + "</b>";
+        let h = t("tipDef") + " " + D + "%<br>";
+        STATS.forEach(s => { h += statName(s.key) + " +" + x.lv[s.key] + t("lvUnit") + " → " + fmtP(x.st[s.key]) + "<br>"; });
+        h += t("tipM") + " <b>×" + x.M.toFixed(3) + "</b>";
         return h;
       } },
     legend: { top: 0, textStyle: { color: "#9aa3c0", fontSize: 11.5 } },
     grid: { left: 40, right: 16, top: 40, bottom: 30 },
     xAxis: { type: "category", data: Ds.map(d => d + "%"), axisLabel: { color: "#9aa3c0" },
-      axisLine: { lineStyle: { color: "#2a3157" } }, name: "敌方DEF", nameTextStyle: { color: "#6b7494" } },
-    yAxis: { type: "value", name: "升级次数", nameTextStyle: { color: "#6b7494" },
+      axisLine: { lineStyle: { color: "#2a3157" } }, name: t("xDef"), nameTextStyle: { color: "#6b7494" } },
+    yAxis: { type: "value", name: t("yLv"), nameTextStyle: { color: "#6b7494" },
       axisLabel: { color: "#9aa3c0" }, splitLine: { lineStyle: { color: "#ffffff10" } } },
     series,
   }, true);
@@ -372,11 +607,11 @@ function drawChartB(perD) {
 function drawChartC(marg) {
   const c = charts.C || (charts.C = echarts.init(document.getElementById("chartC")));
   const series = STATS.map(s => ({
-    name: s.name, type: "bar", barWidth: "22%",
+    name: statName(s.key), type: "bar", barWidth: "22%",
     data: marg.map(x => x.m[s.key] == null ? 0 : +x.m[s.key].toFixed(3)),
     itemStyle: { color: s.color },
     label: { show: true, position: "top", color: "#9aa3c0", fontSize: 10.5,
-      formatter: p => { const raw = marg[p.dataIndex].m[s.key]; return raw == null ? "已满" : raw.toFixed(2) + "%"; } },
+      formatter: p => { const raw = marg[p.dataIndex].m[s.key]; return raw == null ? t("capped") : raw.toFixed(2) + "%"; } },
   }));
   c.setOption({
     backgroundColor: "transparent",
@@ -385,14 +620,78 @@ function drawChartC(marg) {
     grid: { left: 46, right: 16, top: 40, bottom: 30 },
     xAxis: { type: "category", data: marg.map(x => "def " + x.D + "%"),
       axisLabel: { color: "#9aa3c0" }, axisLine: { lineStyle: { color: "#2a3157" } } },
-    yAxis: { type: "value", name: "下一级增益%", nameTextStyle: { color: "#6b7494" },
+    yAxis: { type: "value", name: t("yMarg"), nameTextStyle: { color: "#6b7494" },
       axisLabel: { color: "#9aa3c0", formatter: v => v + "%" },
       splitLine: { lineStyle: { color: "#ffffff10" } } },
     series,
   }, true);
 }
 
-let uniformBuild = null, allatkBuild = null;   // 缓存，滑条拖动时免重复穷举
+function drawChartCheap(sweep, presets) {
+  const c = charts.D || (charts.D = echarts.init(document.getElementById("chartCheap")));
+  const eqData = sweep.Bs.map((_, i) => sweep.eq[i]);
+  const series = [
+    { name: t("chOpt"), type: "line", symbol: "none", smooth: true, data: sweep.opt,
+      lineStyle: { color: "#69d98c", width: 3 }, itemStyle: { color: "#69d98c" },
+      markLine: { symbol: "none",
+        lineStyle: { color: "#59628c", type: "dashed", width: 1.2 },
+        label: { color: "#9aa3c0", fontSize: 10.5, position: "insideEndTop" },
+        data: presets.filter(p => p.within).map(p => ({ xAxis: String(p.B) })) } },
+    { name: t("chAA"), type: "line", symbol: "none", smooth: true, data: sweep.aa,
+      lineStyle: { color: "#ffb74d", width: 2 }, itemStyle: { color: "#ffb74d" } },
+    { name: t("chEq"), type: "line", symbol: "circle", symbolSize: 4, connectNulls: true, data: eqData,
+      lineStyle: { color: "#b388ff", width: 1.6, type: "dashed" }, itemStyle: { color: "#b388ff" } },
+  ];
+  if (sweep.cross != null && sweep.cross <= params.budget) {
+    series[0].markLine.data.push({ xAxis: String(sweep.cross),
+      lineStyle: { color: "#ff8a80", type: "dashed", width: 1.4 },
+      label: { formatter: t("crossMark"), color: "#ff8a80", fontSize: 10.5 } });
+  }
+  c.setOption({
+    backgroundColor: "transparent",
+    tooltip: { trigger: "axis", valueFormatter: v => v == null ? "—" : "×" + (+v).toFixed(3) },
+    legend: { top: 0, textStyle: { color: "#9aa3c0", fontSize: 11.5 } },
+    grid: { left: 52, right: 20, top: 44, bottom: 34 },
+    xAxis: { type: "category", data: sweep.Bs, name: t("xBudget"), nameTextStyle: { color: "#6b7494" },
+      axisLabel: { color: "#9aa3c0", interval: 9 }, axisLine: { lineStyle: { color: "#2a3157" } } },
+    yAxis: { type: "value", name: t("yBudget"), nameTextStyle: { color: "#6b7494" },
+      axisLabel: { color: "#9aa3c0", formatter: v => "×" + v },
+      splitLine: { lineStyle: { color: "#ffffff10" } } },
+    series,
+  }, true);
+}
+
+function renderCheap(sweep, presets, fullAvg) {
+  document.getElementById("capCheap").innerHTML = tf("capCheap", {
+    Bmax: params.budget, cross: sweep.cross == null ? ">" + params.budget : "≈" + sweep.cross,
+    gain: presets.find(p => p.L === 12) ? "+" + pctchg(presets.find(p => p.L === 12).opt.avgM, presets.find(p => p.L === 12).eq.avgM) : "—",
+  });
+  const rows = presets.map(p => {
+    const o = p.opt.lv;
+    const optDesc = STATS.slice().reverse().map(s => statShort(s.key) + "+" + o[s.key]).join(" · ");
+    const eqStats = STATS.map(s => statShort(s.key) + fmtP(p.eq.st[s.key])).join(" ");
+    return `<tr>
+      <td><b>${t("p" + p.L)}</b><br><span class="small">${tf("times", { n: p.B })} (${t("statS_pierce")}/${t("statS_crit_rate")}/${t("statS_crit_dmg")}/${t("statS_atk")} = ${p.L})</span></td>
+      <td><b>${optDesc}</b><br><span class="small">${STATS.map(s => statShort(s.key) + fmtP(p.opt.st[s.key])).join(" ")}</span></td>
+      <td><b>${fmtM3(p.opt.avgM)}</b></td>
+      <td><b>${fmtM3(p.eq.avgM)}</b><br><span class="small">${eqStats}</span></td>
+      <td><b style="color:var(--good)">+${pctchg(p.opt.avgM, p.eq.avgM)}</b></td>
+      <td>${(p.opt.avgM / fullAvg * 100).toFixed(0)}%</td>
+    </tr>`;
+  }).join("");
+  const o = uniformBuild.lv;
+  document.getElementById("cheapTable").innerHTML = `
+    <table>
+      <tr><th>${t("hPreset")}</th><th>${t("hOpt")}</th><th>${t("hOptM")}</th><th>${t("hEq")}</th><th>${t("hGain")}</th><th>${t("hFrac")}</th></tr>
+      ${rows}
+      <tr><td><b>${t("pFull")}</b><br><span class="small">${tf("times", { n: params.budget })}</span></td>
+        <td><b>${STATS.map(s => statShort(s.key) + "+" + o[s.key]).join(" · ")}</b></td>
+        <td><b>${fmtM3(uniformBuild.avgM)}</b></td><td>—</td><td>—</td><td>100%</td></tr>
+    </table>
+    <p style="margin-top:10px">${tf("cheapNote", { cross: sweep.cross == null ? params.budget : sweep.cross })}</p>`;
+}
+
+let uniformBuild = null, allatkBuild = null;
 function renderDSel(D) {
   const lv = optimize("fixed", D), st = makeStats(lv);
   const M = multOf(st, D);
@@ -400,77 +699,69 @@ function renderDSel(D) {
   document.getElementById("dval").textContent = "def = " + D + "%";
   document.getElementById("dsel").innerHTML = `
     <table>
-      <tr><th>属性</th><th>投入</th><th>最终值</th><th>期望倍率</th></tr>
-      ${STATS.map(s => `<tr><td><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:6px"></span>${s.name}</td>
-        <td><b>+${lv[s.key]}</b> 级</td><td><b>${fmtP(st[s.key])}</b></td>
+      <tr><th>${t("hStat")}</th><th>${t("hInvest")}</th><th>${t("hFinal")}</th><th>${t("hM")}</th></tr>
+      ${STATS.map(s => `<tr><td><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:6px"></span>${statName(s.key)}</td>
+        <td><b>+${lv[s.key]}</b>${t("lvUnit")}</td><td><b>${fmtP(st[s.key])}</b></td>
         ${s.key === "pierce" ? `<td rowspan="4"><b style="font-size:18px;color:var(--warn)">×${M.toFixed(3)}</b><br>
-          <span style="color:var(--tx3);font-size:12px">vs 全攻击 ${pctchg(M, multOf(allatk.st, D))}<br>
-          vs 通用推荐 ${pctchg(M, multOf(u.st, D))}</span></td>` : ""}</tr>`).join("")}
+          <span class="small">${t("kVsAtk")} ${pctchg(M, multOf(allatk.st, D))}<br>
+          ${t("kVsRec")} ${pctchg(M, multOf(u.st, D))}</span></td>` : ""}</tr>`).join("")}
     </table>`;
 }
 
 function renderNotes(top5, be, u) {
-  const rows = top5.map((t, i) => {
-    const lv = { pierce: t.p, crit_rate: t.q, crit_dmg: t.r, atk: t.s }, st = makeStats(lv);
-    return `<tr><td>${i + 1}</td><td><b>+${t.p} / +${t.q} / +${t.r} / +${t.s}</b> 级</td>
-      <td>穿 ${fmtP(st.pierce)} · 暴率 ${fmtP(st.crit_rate)} · 暴伤 ${fmtP(st.crit_dmg)} · 攻 ${fmtP(st.atk)}</td>
-      <td><b>${fmtM(t.v)}</b></td></tr>`;
+  const rows = top5.map((x, i) => {
+    const lv = { pierce: x.p, crit_rate: x.q, crit_dmg: x.r, atk: x.s }, st = makeStats(lv);
+    return `<tr><td>${i + 1}</td><td><b>+${x.p} / +${x.q} / +${x.r} / +${x.s}</b>${t("lvUnit")}</td>
+      <td>${statName("pierce")} ${fmtP(st.pierce)} · ${statName("crit_rate")} ${fmtP(st.crit_rate)} · ${statName("crit_dmg")} ${fmtP(st.crit_dmg)} · ${statName("atk")} ${fmtP(st.atk)}</td>
+      <td><b>${fmtM(x.v)}</b></td></tr>`;
   }).join("");
   document.getElementById("notes").innerHTML = `
-  <h4>已核实的机制（点击链接可查原文）</h4>
+  <h4>${t("nMech")}</h4>
   <ul>
-    <li><b>防御</b>：线性百分比减伤 <code>受伤 = 基础 × (1 − DEF%)</code>，上限 50%（正好覆盖本题 15–50 区间）。—
-      <a href="https://forum.skullgirlsmobile.com/threads/advanced-stats-guide-1-2-0.260/">官方论坛·Advanced Stats Guide</a>、
-      <a href="https://skullgirlsmobile.fandom.com/wiki/Sub-Stat">fandom·Sub-Stat</a></li>
-    <li><b>穿透</b>：按比例无视敌方减伤（<code>有效减伤 = DEF × (1 − 穿透)</code>），同时作用于 DEFENSE 与 ARMOR，上限 50%。
-      论坛实测帖明确否定了补丁公告的"相减"说法："after some testing we found it's <i>dividing</i> the defense rather than subtracting it"；Reddit 实测同样为"相乘"。50% 防 + 50% 穿透 → 承受 75%。—
-      <a href="https://forum.skullgirlsmobile.com/threads/accuracy%E3%80%81piercing-how-does-them-work.17952/">论坛·Piercing how does them work</a>、
-      <a href="https://forum.skullgirlsmobile.com/threads/piercing-and-defense-arent-working-as-intended.21128/">论坛·Piercing and defense aren't working as intended</a>、
-      <a href="https://www.reddit.com/r/SkullGirlsMobile/comments/1jzrrh2/damage_pierced_through_5_armor/">Reddit·Damage pierced through 5 armor</a></li>
-    <li><b>暴击</b>：期望加成 = 暴击率 × 暴伤（论坛："crit rate and crit damage basically get multiplied together"）；暴击率上限 100%，暴伤上限 200%。—
-      <a href="https://forum.skullgirlsmobile.com/threads/advanced-stats-guide-1-2-0.260/">Advanced Stats Guide</a>、
-      <a href="https://skullgirlsmobile.fandom.com/wiki/Sub-Stat">fandom·Sub-Stat（各上限表）</a></li>
+    <li>${t("m1")}<a href="https://forum.skullgirlsmobile.com/threads/advanced-stats-guide-1-2-0.260/">Advanced Stats Guide</a>、
+      <a href="https://skullgirlsmobile.fandom.com/wiki/Sub-Stat">fandom · Sub-Stat</a></li>
+    <li>${t("m2")}<a href="https://forum.skullgirlsmobile.com/threads/accuracy%E3%80%81piercing-how-does-them-work.17952/">论坛 · Piercing how does them work</a>、
+      <a href="https://forum.skullgirlsmobile.com/threads/piercing-and-defense-arent-working-as-intended.21128/">论坛 · Piercing and defense aren't working as intended</a>、
+      <a href="https://www.reddit.com/r/SkullGirlsMobile/comments/1jzrrh2/damage_pierced_through_5_armor/">Reddit · Damage pierced through 5 armor</a></li>
+    <li>${t("m3")}<a href="https://forum.skullgirlsmobile.com/threads/advanced-stats-guide-1-2-0.260/">Advanced Stats Guide</a>、
+      <a href="https://skullgirlsmobile.fandom.com/wiki/Sub-Stat">fandom · Sub-Stat</a></li>
   </ul>
-  <h4>模型假设</h4>
-  <ul>
-    <li>敌方只有百分比减伤（不计 ARMOR 叠层、元素、Deadeye 等特殊机制）；每次升级 = 给某一项 +3%，可任意分配，顺序不影响结果。</li>
-    <li>初始值取题述四项：穿透 3、暴击率 3（基础 15% 之上）、暴伤 6（基础 35% 之上）、攻击 6，合计 18（题面"4+5×3=19"与此略有出入；如有 1 点富余初始值，影响可忽略，可在上方参数区自行修改）。</li>
-    <li>上限浪费已建模：穿透 48→50 那级只净赚 2 点、暴击率 99→100 那级只净赚 1 点——穷举会自动避开不划算的"满级"。</li>
-    <li>"def 15–50 环境"按均匀分布求平均期望；也提供最坏情况（maximin）与单点 def 最优（图B滑条）。</li>
-  </ul>
-  <h4>通用推荐的近似最优平台（平均倍率差距 &lt;1% 的前几名）</h4>
-  <table><tr><th>#</th><th>加点(穿/暴率/暴伤/攻)</th><th>最终属性</th><th>平均倍率</th></tr>${rows}</table>
-  <p style="margin-top:10px">可见最优解不是一个点而是一个平台——在暴击率点满的前提下，攻击与暴伤在 ±3~4 级内互换、穿透 ±1 级，损失都不超过 1%，按手感取即可。</p>`;
+  <h4>${t("nAssum")}</h4>
+  <ul><li>${t("a1")}</li><li>${t("a2")}</li><li>${t("a3")}</li><li>${t("a4")}</li></ul>
+  <h4>${t("nTop5")}</h4>
+  <table><tr><th>${t("hRank")}</th><th>${t("hBuild")}</th><th>${t("hStats")}</th><th>${t("hAvgM")}</th></tr>${rows}</table>
+  <p style="margin-top:10px">${t("nTop5Close")}</p>`;
 }
 
 /* ================= 参数面板 ================= */
 const PFIELDS = [
-  { grp: "资源" },
-  { key: "budget", label: "升级预算(次)", min: 0, max: 500, step: 1 },
-  { key: "inc", label: "每级增量(%)", min: 1, max: 10, step: 1 },
-  { key: "model", label: "减伤模型", select: [["linear", "线性 (1−def)"], ["diminish", "递减 100/(100+def)"]] },
-  { grp: "敌方 DEF 环境(%)" },
-  { key: "dmin", label: "最低 def", min: 0, max: 90, step: 1 },
-  { key: "dmax", label: "最高 def", min: 0, max: 90, step: 1 },
-  { grp: "穿透 pierce" },
-  { key: "base.pierce", label: "基础(%)" }, { key: "init.pierce", label: "初始(%)" }, { key: "caps.pierce", label: "上限(%)" },
-  { grp: "暴击率 crit rate" },
-  { key: "base.crit_rate", label: "基础(%)" }, { key: "init.crit_rate", label: "初始(%)" }, { key: "caps.crit_rate", label: "上限(%)" },
-  { grp: "暴伤 crit damage" },
-  { key: "base.crit_dmg", label: "基础(%)" }, { key: "init.crit_dmg", label: "初始(%)" }, { key: "caps.crit_dmg", label: "上限(%)" },
-  { grp: "攻击 atk" },
-  { key: "base.atk", label: "基础(%)" }, { key: "init.atk", label: "初始(%)" }, { key: "caps.atk", label: "上限(留大数=无)" },
+  { grp: "grpRes" },
+  { key: "budget", label: "fBudget", min: 0, max: 500, step: 1 },
+  { key: "inc", label: "fInc", min: 1, max: 10, step: 1 },
+  { key: "model", label: "fModel", select: [["linear", "fLinear"], ["diminish", "fDim"]] },
+  { grp: "grpEnv" },
+  { key: "dmin", label: "fDmin", min: 0, max: 90, step: 1 },
+  { key: "dmax", label: "fDmax", min: 0, max: 90, step: 1 },
+  { grp: "grpPierce" },
+  { key: "base.pierce", label: "fBase" }, { key: "init.pierce", label: "fInit" }, { key: "caps.pierce", label: "fCap" },
+  { grp: "grpRate" },
+  { key: "base.crit_rate", label: "fBase" }, { key: "init.crit_rate", label: "fInit" }, { key: "caps.crit_rate", label: "fCap" },
+  { grp: "grpDmg" },
+  { key: "base.crit_dmg", label: "fBase" }, { key: "init.crit_dmg", label: "fInit" }, { key: "caps.crit_dmg", label: "fCap" },
+  { grp: "grpAtk" },
+  { key: "base.atk", label: "fBase" }, { key: "init.atk", label: "fInit" }, { key: "caps.atk", label: "fCapAtk" },
 ];
 function getPath(o, p) { return p.split(".").reduce((a, k) => a[k], o); }
 function setPath(o, p, v) { const ks = p.split("."); ks.slice(0, -1).forEach(k => o = o[k]); o[ks[ks.length - 1]] = v; }
 function renderParamPanel() {
   document.getElementById("pgrid").innerHTML = PFIELDS.map(f => {
-    if (f.grp) return `<div class="grp">${f.grp}</div>`;
-    if (f.select) return `<div><label>${f.label}</label><select id="pf_${f.key}">
-      ${f.select.map(([v, t]) => `<option value="${v}" ${getPath(params, f.key) === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>`;
-    return `<div><label>${f.label}</label><input id="pf_${f.key}" type="number"
+    if (f.grp) return `<div class="grp">${t(f.grp)}</div>`;
+    if (f.select) return `<div><label>${t(f.label)}</label><select id="pf_${f.key}">
+      ${f.select.map(([v, k]) => `<option value="${v}" ${getPath(params, f.key) === v ? "selected" : ""}>${t(k)}</option>`).join("")}</select></div>`;
+    return `<div><label>${t(f.label)}</label><input id="pf_${f.key}" type="number"
       ${f.min != null ? `min="${f.min}" max="${f.max}" step="${f.step}"` : ""} value="${getPath(params, f.key)}"></div>`;
   }).join("");
+  document.getElementById("apply").textContent = t("apply");
 }
 function readParams() {
   PFIELDS.forEach(f => {
@@ -483,6 +774,25 @@ function readParams() {
   params.caps.atk = Math.max(params.caps.atk, startVal("atk") + params.inc * params.budget + 10);
   params.dmin = clamp(Math.round(params.dmin), 0, 90);
   params.dmax = clamp(Math.round(params.dmax), 0, 90);
+}
+
+/* ================= 静态文案 ================= */
+function renderStaticTexts() {
+  document.title = t("title");
+  document.getElementById("t_title").textContent = t("title");
+  document.getElementById("t_sub").textContent = t("sub");
+  document.getElementById("t_formulaLabel").textContent = t("formulaLabel");
+  document.getElementById("t_formulaNote").textContent = t("formulaNote");
+  ["secVerdict","secChartA","secChartB","secChartC","secCheap","secParams","secNotes"].forEach(k => {
+    const el = document.getElementById("t_" + k);
+    if (el) el.textContent = t(k);
+  });
+  ["capA","capB","capC"].forEach(k => {
+    const el = document.getElementById(k);
+    if (el) el.innerHTML = t(k);
+  });
+  document.getElementById("t_foot").textContent = t("foot");
+  renderLangBtns();
 }
 
 /* ================= 主流程 ================= */
@@ -516,6 +826,11 @@ function recompute() {
     .map(D => ({ D, m: marginalsAt(u.st, D) }));
   drawChartC(marg);
 
+  const sweep = budgetSweep();
+  const presets = cheapPresets();
+  drawChartCheap(sweep, presets);
+  renderCheap(sweep, presets, u.avgM);
+
   const top5 = topBuilds(5);
   renderNotes(top5, pierceBreakeven(u.st), u);
 
@@ -529,6 +844,7 @@ document.getElementById("apply").addEventListener("click", () => { readParams();
 document.getElementById("dslider").addEventListener("input", e => renderDSel(+e.target.value));
 window.addEventListener("resize", () => Object.values(charts).forEach(c => c.resize()));
 
+renderStaticTexts();
 renderParamPanel();
 recompute();
 </script>

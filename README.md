@@ -8,11 +8,14 @@ damage against enemies with **15–50% defense**?
 
 - `index.html` — interactive visualization (open directly in a browser; needs
   `echarts.min.js` in the same folder; fully offline, all client-side).
+  UI is trilingual: 简体中文 / 繁體中文 / English (top-right switcher, persisted).
 - `echarts.min.js` — Apache ECharts 5.5.1, vendored for offline use.
 - `solve.py` — brute-force optimizer (ground truth), writes `results.json`.
 - `verify.js` — runs the page's own inline JS in Node (DOM/echarts stubs) and
-  asserts its optimizer output matches `results.json`.
-- `results.json` — solver output (optima, per-D optima, baselines, marginals, top-5).
+  asserts its optimizer output matches `results.json` (including cheap presets
+  and the language switcher).
+- `results.json` — solver output (optima, per-D optima, baselines, marginals,
+  top-5, budget presets).
 
 ## Verified model (community-sourced, see links in the page)
 
@@ -42,6 +45,22 @@ all-ATK grows to +19.8%. Key mechanics: max Crit Rate first (~99%), then ATK and
 Crit Damage split the rest (equal marginals ≈ +1.40%/level); Pierce only pays
 off when enemy DEF ≳ 33 (break-even at the recommended build), so a uniform
 15–50 environment warrants just 2 levels, while a DEF-50 environment wants 15.
+
+## Budget presets ("cheap builds", Chart D + table)
+
+For a total budget of 4L upgrades, "L levels in EVERY stat" (equal split) is
+never optimal. Optimal allocations at the same spend (uniform def 15–50):
+
+| Preset | Budget | Optimal (P/CR/CD/ATK) | Optimal avg × | Equal-split avg × | Gain |
+|---|---|---|---|---|---|
+| All 9lv | 36 | 1/0/0/35 | ×1.574 | ×1.342 | +17.3% |
+| All 10lv · Marquee | 40 | 3/0/0/37 | ×1.664 | ×1.426 | +16.6% |
+| All 12lv | 48 | 7/0/0/41 | ×1.852 | ×1.612 | +14.9% |
+| All 15lv · Marquee | 60 | 13/0/0/47 | ×2.152 | ×1.935 | +11.3% |
+
+Headline: **below ~68 upgrades the optimal build contains zero crit** — go
+all-ATK plus a few Pierce; the Crit Rate × Crit Dmg duo only overtakes past
+that budget.
 
 ## Reproduce / verify
 

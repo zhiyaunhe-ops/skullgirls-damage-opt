@@ -156,6 +156,21 @@ def main():
     res["marginals_at_uniform_opt"] = {str(D): marginals(u, D) for D in (15, 32, 50)}
     res["pierce_breakeven_vs_atk"] = pierce_breakeven_vs_atk(u["atk"], u["pierce"])
 
+    # budget presets ("cheap builds"): L levels in EVERY stat (equal split)
+    # vs the optimal allocation at the same total budget 4L.
+    res["cheap"] = {}
+    for L in (9, 10, 12, 15):
+        B = 4 * L
+        eq = baseline(f"eq{L}", L, L, L, L)
+        aa = baseline(f"aa{B}", 0, 0, 0, B)
+        opt = solve("uniform", budget=B)
+        res["cheap"][str(L)] = {
+            "budget": B, "opt": opt, "equal": eq, "allatk": aa,
+            "equal_avg": round(sum(eq["M"].values()) / len(eq["M"]), 6),
+            "opt_avg": round(sum(opt["M"].values()) / len(opt["M"]), 6),
+            "allatk_avg": round(sum(aa["M"].values()) / len(aa["M"]), 6),
+        }
+
     # top-5 uniform-environment builds within 1% of the optimum
     cands = []
     for p, q, r, s in enumerate_allocations(BUDGET, P_CAP, C_CAP, K_CAP):

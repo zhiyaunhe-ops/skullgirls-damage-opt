@@ -27,7 +27,11 @@ const echartsStub = {
   init(elm) { return { setOption(opt) { chartOpts.push({ id: elm.id, opt }); }, resize() {} }; },
 };
 const ctx = {
-  document: { getElementById: el },
+  document: {
+    getElementById: el,
+    querySelectorAll: () => [],
+    documentElement: { lang: "" },
+  },
   window: { addEventListener() {} },
   echarts: echartsStub, console, Math, JSON, isFinite, parseFloat,
 };
@@ -60,6 +64,11 @@ const out = JSON.parse(vm.runInContext(`JSON.stringify({
   f25M: multOf(makeStats(optimize("fixed", 25)), 25),
   f35M: multOf(makeStats(optimize("fixed", 35)), 35),
   f50M: multOf(makeStats(optimize("fixed", 50)), 50),
+  cheap: [9, 10, 12, 15].map(L => {
+    const o = optimize("uniform", null, 4 * L);
+    const eqLv = { pierce: L, crit_rate: L, crit_dmg: L, atk: L };
+    return { L, opt: o, optAvg: buildCurve(o).avgM, eqStats: makeStats(eqLv), eqAvg: buildCurve(eqLv).avgM };
+  }),
   top1: topBuilds(1)[0],
 })`, ctx));
 
@@ -102,6 +111,17 @@ eq("marg32.crit_rate", out.marg32.crit_rate, ref.marginals_at_uniform_opt["32"].
 eq("marg32.crit_dmg", out.marg32.crit_dmg, ref.marginals_at_uniform_opt["32"].crit_dmg, 1e-4);
 eq("top1 objective", out.top1.v, ref.uniform_top5[0].objective, 1e-6);
 
+// cheap budget presets vs results.json
+for (const c of out.cheap) {
+  const refc = ref.cheap[String(c.L)];
+  eq(`cheap L=${c.L} opt levels`,
+    c.opt.pierce + "," + c.opt.crit_rate + "," + c.opt.crit_dmg + "," + c.opt.atk,
+    [refc.opt.levels.pierce, refc.opt.levels.crit_rate, refc.opt.levels.crit_dmg, refc.opt.levels.atk].join(","));
+  eq(`cheap L=${c.L} optAvg`, c.optAvg, refc.opt_avg, 1e-6);
+  eq(`cheap L=${c.L} eqAvg`, c.eqAvg, refc.equal_avg, 1e-6);
+  eq(`cheap L=${c.L} eq stats.atk`, c.eqStats.atk, refc.equal.stats.atk);
+}
+
 // page wiring: rendered verdict HTML + charts
 const vhtml = elements["verdicts"] ? elements["verdicts"]._html : "";
 for (const s of ["通用推荐", "高防/最坏情况推荐", "+2级", "+27级", "+24级", "+36级", "×3.19"]) {
@@ -110,10 +130,26 @@ for (const s of ["通用推荐", "高防/最坏情况推荐", "+2级", "+27级",
 const a = chartOpts.find(o => o.id === "chartA");
 const b = chartOpts.find(o => o.id === "chartB");
 const c = chartOpts.find(o => o.id === "chartC");
+const d = chartOpts.find(o => o.id === "chartCheap");
 if (!a || a.opt.series.length !== 6) { fails++; console.error("FAIL chartA series != 6"); } else console.log("ok   chartA: 6 series");
 if (!b || b.opt.xAxis.data.length !== 8) { fails++; console.error("FAIL chartB categories != 8"); } else console.log("ok   chartB: 8 def categories");
 if (!c || c.opt.series.length !== 4) { fails++; console.error("FAIL chartC series != 4"); } else console.log("ok   chartC: 4 series");
+if (!d || d.opt.series.length !== 3) { fails++; console.error("FAIL chartCheap series != 3"); } else console.log("ok   chartCheap: 3 series");
 if (!elements["dsel"] || !elements["dsel"]._html.includes("×")) { fails++; console.error("FAIL def-slider panel not rendered"); } else console.log("ok   def-slider panel rendered");
+const cheapHtml = elements["cheapTable"] ? elements["cheapTable"]._html : "";
+if (!cheapHtml.includes("×1.5") && !cheapHtml.includes("×1.6") && !cheapHtml.includes("×1.7")) { fails++; console.error("FAIL cheap table missing multiplier rows"); } else console.log("ok   cheap table rendered with preset rows");
+
+// language switch: zh-CN -> en -> zh-CN
+vm.runInContext(`setLang("en")`, ctx);
+const ven = elements["verdicts"]._html;
+for (const s of ["Recommended", "TL;DR", "all-ATK"]) {
+  if (!ven.includes(s)) { fails++; console.error("FAIL en verdicts missing: " + s); } else console.log("ok   en verdicts contain: " + s);
+}
+if (!(elements["cheapTable"]._html.includes("Marquee"))) { fails++; console.error("FAIL en cheap table missing Marquee preset"); } else console.log("ok   en cheap table contains Marquee preset");
+vm.runInContext(`setLang("zh-TW")`, ctx);
+if (!elements["verdicts"]._html.includes("通用推薦")) { fails++; console.error("FAIL zh-TW verdicts missing 通用推薦"); } else console.log("ok   zh-TW verdicts contain: 通用推薦");
+vm.runInContext(`setLang("zh-CN")`, ctx);
+if (!elements["verdicts"]._html.includes("通用推荐")) { fails++; console.error("FAIL zh-CN restore failed"); } else console.log("ok   lang restored to zh-CN");
 
 console.log(fails ? `\n${fails} FAILURES` : "\nALL CHECKS PASSED");
 process.exit(fails ? 1 : 0);
